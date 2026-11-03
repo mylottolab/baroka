@@ -78,6 +78,8 @@ create table if not exists public.baroka_ads (
   clicks      bigint not null default 0,
   created_at  timestamptz not null default now()
 );
+-- 🔴 어느 앱에 싣나: baroka(바로카) · baronu(바로너). 바로너는 부름 서버지만 광고는 여기서 읽어 갑니다.
+alter table public.baroka_ads add column if not exists apps text[] not null default array['baroka'];
 alter table public.baroka_ads enable row level security;
 revoke all on public.baroka_ads from anon, authenticated;
 
@@ -226,12 +228,14 @@ begin
 end $$;
 
 -- ④ 타일 광고 — 누구나 볼 수 있는 목록 · 보기/누르기 숫자 ---------------------------
-create or replace function public.baroka_ads_list()
+drop function if exists public.baroka_ads_list();
+create or replace function public.baroka_ads_list(p_app text default 'baroka')
 returns jsonb language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object('id', id, 'title', title, 'sub', sub, 'image', image_url, 'link', link_url, 'bg', bg)
                             order by sort, created_at), '[]'::jsonb)
     from baroka_ads
-   where active and (starts_at is null or starts_at <= now()) and (ends_at is null or ends_at > now())
+   where active and coalesce(p_app, 'baroka') = any(apps)
+     and (starts_at is null or starts_at <= now()) and (ends_at is null or ends_at > now())
 $$;
 
 create or replace function public.baroka_ad_hit(p_id uuid, p_click boolean default false)
@@ -261,21 +265,23 @@ end $$;
 create or replace function public.baroka_admin_ad_save(p jsonb)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare v_id uuid := nullif(p->>'id', '')::uuid;
+        v_apps text[] := coalesce((select array_agg(x) from jsonb_array_elements_text(coalesce(p->'apps', '["baroka"]'::jsonb)) x
+                                    where x in ('baroka', 'baronu')), array['baroka']);
 begin
   if not coalesce(is_global_admin(), false) then return jsonb_build_object('ok', false, 'error', 'not_admin'); end if;
   if v_id is null then
-    insert into baroka_ads (title, sub, image_url, link_url, bg, advertiser, memo, sort, active, starts_at, ends_at)
+    insert into baroka_ads (title, sub, image_url, link_url, bg, advertiser, memo, sort, active, starts_at, ends_at, apps)
     values (coalesce(p->>'title', ''), coalesce(p->>'sub', ''), nullif(p->>'image_url', ''), nullif(p->>'link_url', ''),
             coalesce(nullif(p->>'bg', ''), '#FFFFFF'), coalesce(p->>'advertiser', ''), coalesce(p->>'memo', ''),
             coalesce((p->>'sort')::int, 0), coalesce((p->>'active')::boolean, true),
-            nullif(p->>'starts_at', '')::timestamptz, nullif(p->>'ends_at', '')::timestamptz)
+            nullif(p->>'starts_at', '')::timestamptz, nullif(p->>'ends_at', '')::timestamptz, v_apps)
     returning id into v_id;
   else
     update baroka_ads set title = coalesce(p->>'title', ''), sub = coalesce(p->>'sub', ''),
       image_url = nullif(p->>'image_url', ''), link_url = nullif(p->>'link_url', ''),
       bg = coalesce(nullif(p->>'bg', ''), '#FFFFFF'), advertiser = coalesce(p->>'advertiser', ''), memo = coalesce(p->>'memo', ''),
       sort = coalesce((p->>'sort')::int, 0), active = coalesce((p->>'active')::boolean, true),
-      starts_at = nullif(p->>'starts_at', '')::timestamptz, ends_at = nullif(p->>'ends_at', '')::timestamptz
+      starts_at = nullif(p->>'starts_at', '')::timestamptz, ends_at = nullif(p->>'ends_at', '')::timestamptz, apps = v_apps
     where id = v_id;
   end if;
   return jsonb_build_object('ok', true, 'id', v_id);
@@ -395,7 +401,7 @@ grant execute on function public.baroka_admin_ad_save(jsonb) to authenticated;
 grant execute on function public.baroka_admin_ad_delete(uuid) to authenticated;
 grant execute on function public.baroka_admin_grant(text, text, integer) to authenticated;
 grant execute on function public.baroka_admin_prices(integer, integer) to authenticated;
-grant execute on function public.baroka_ads_list() to anon, authenticated;
+grant execute on function public.baroka_ads_list(text) to anon, authenticated;
 grant execute on function public.baroka_ad_hit(uuid, boolean) to anon, authenticated;
 grant execute on function public.baroka_plate_key(text) to anon, authenticated;
 grant execute on function public.baroka_plate_ok(text) to anon, authenticated;

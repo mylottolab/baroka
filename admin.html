@@ -37,7 +37,7 @@
     <section class="bk-card"><h2>현황</h2><div class="st" id="st"></div></section>
 
     <section class="bk-card">
-      <h2>타일 광고</h2>
+      <h2>타일 광고 (바로카 · 바로너)</h2>
       <p class="bk-sub">그림은 정사각형에 가까운 것(가로 600px 안팎)이 가장 보기 좋습니다. 그림이 없으면 바탕색 위에 글자 타일로 나옵니다.</p>
       <table><thead><tr><th>광고</th><th>기간</th><th>보기 / 누름</th><th></th></tr></thead><tbody id="ads"></tbody></table>
       <div class="f" id="form">
@@ -53,7 +53,12 @@
         <div><label>끝(비우면 계속)</label><input id="aTo" type="date"></div>
         <div><label>광고주(관리자만 봄)</label><input id="aWho"></div>
         <div><label>메모(계약 · 금액)</label><input id="aMemo"></div>
-        <label class="w" style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="aOn" checked style="width:20px;height:20px"> 보이기</label>
+        <div class="w" style="display:flex;gap:16px;flex-wrap:wrap;font-size:14px;font-weight:800">
+          <span style="color:var(--bk-sub)">싣는 곳</span>
+          <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="apBk" checked style="width:20px;height:20px"> 바로카</label>
+          <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="apBn" style="width:20px;height:20px"> 바로너</label>
+          <label style="display:flex;gap:6px;align-items:center;margin-left:auto"><input type="checkbox" id="aOn" checked style="width:20px;height:20px"> 보이기</label>
+        </div>
         <div class="w bk-row"><button class="bk-btn blue sm" id="aSave">저장</button><button class="bk-btn ghost sm" id="aNew">새로 쓰기</button></div>
       </div>
     </section>
@@ -98,7 +103,7 @@
     $('pReg').value = d.price_reg; $('pChg').value = d.price_change;
     ADS = d.ads || [];
     $('ads').innerHTML = ADS.length ? ADS.map(function(a){
-      return '<tr><td><b>' + BK.esc(a.title) + '</b><br><small>' + BK.esc(a.sub) + (a.advertiser ? ' · ' + BK.esc(a.advertiser) : '') + '</small>' + (a.active ? '' : ' <span class="bk-tag y">숨김</span>') + '</td>' +
+      return '<tr><td><b>' + BK.esc(a.title) + '</b><br><small>' + BK.esc(a.sub) + (a.advertiser ? ' · ' + BK.esc(a.advertiser) : '') + '</small><br><small>' + ((a.apps || ['baroka']).map(function(x){ return x === 'baronu' ? '바로너' : '바로카'; }).join(' · ')) + '</small>' + (a.active ? '' : ' <span class="bk-tag y">숨김</span>') + '</td>' +
         '<td><small>' + (day(a.starts_at) || '바로') + ' ~ ' + (day(a.ends_at) || '계속') + '</small></td>' +
         '<td>' + a.views + ' / ' + a.clicks + '</td>' +
         '<td><button class="mini" data-e="' + a.id + '">고치기</button> <button class="mini" data-d="' + a.id + '">지우기</button></td></tr>';
@@ -115,12 +120,14 @@
     $('aImg').value = a.image_url || ''; $('aBg').value = a.bg || '#FFFFFF'; $('aSort').value = a.sort || 0;
     $('aFrom').value = day(a.starts_at); $('aTo').value = day(a.ends_at); $('aWho').value = a.advertiser || ''; $('aMemo').value = a.memo || '';
     $('aOn').checked = a.active !== false; $('aFile').value = '';
+    var ap = a.apps || ['baroka']; $('apBk').checked = ap.indexOf('baroka') >= 0; $('apBn').checked = ap.indexOf('baronu') >= 0;
     $('form').scrollIntoView({ behavior: 'smooth' });
   }
   $('aNew').onclick = function(){ edit(null); };
   $('aSave').onclick = async function(){
     var b = this; b.disabled = true;
     try {
+      if (!$('apBk').checked && !$('apBn').checked) throw new Error('싣는 곳(바로카 · 바로너)을 하나 이상 골라 주세요');
       var img = $('aImg').value.trim();
       var f = $('aFile').files[0];
       if (f) {
@@ -133,7 +140,8 @@
         id: $('aId').value, title: $('aTitle').value.trim(), sub: $('aSub').value.trim(), link_url: $('aLink').value.trim(), image_url: img,
         bg: $('aBg').value, sort: Number($('aSort').value || 0), active: $('aOn').checked,
         starts_at: $('aFrom').value ? $('aFrom').value + 'T00:00:00+09:00' : '', ends_at: $('aTo').value ? $('aTo').value + 'T23:59:59+09:00' : '',
-        advertiser: $('aWho').value.trim(), memo: $('aMemo').value.trim() } });
+        advertiser: $('aWho').value.trim(), memo: $('aMemo').value.trim(),
+        apps: [$('apBk').checked ? 'baroka' : null, $('apBn').checked ? 'baronu' : null].filter(Boolean) } });
       if (r.error || !r.data.ok) throw new Error((r.error && r.error.message) || r.data.error);
       edit(null); say('저장했어요.', 'ok'); load();
     } catch (e) { say('저장하지 못했어요: ' + (e.message || e), 'bad'); }

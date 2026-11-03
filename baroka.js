@@ -71,7 +71,7 @@
   BK.ads = async function(boxes, min){
     boxes = (boxes || []).filter(Boolean);
     if (!boxes.length) return;
-    if (!adsP) adsP = BK.sb.rpc('baroka_ads_list').then(function(r){ return r.data || []; }, function(){ return []; });
+    if (!adsP) adsP = BK.sb.rpc('baroka_ads_list', { p_app: 'baroka' }).then(function(r){ return r.data || []; }, function(){ return []; });
     var list = await adsP;
     var seen = {};
     boxes.forEach(function(box, bi){
