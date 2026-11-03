@@ -1,25 +1,27 @@
-/* =====================================================================
-   Aliascall — aliascall-web-pay
-   2026-10-01 신설 — 웹(브라우저)에서 앱과 같은 이용권을 국내카드(이니시스) · PayPal 로 팝니다.
+// 바로카 결제를 더한 판 (2026-11-03) — 이 줄부터 파일 끝까지 통째로 붙여 넣으세요
+// =====================================================================
+// Aliascall — aliascall-web-pay
+// 2026-10-01 신설 — 웹(브라우저)에서 앱과 같은 이용권을 국내카드(이니시스) · PayPal 로 팝니다.
+// 
+// 🔴 상품 · 값 · 적용 규칙은 aliascall-google-verify 와 **똑같습니다.**
+// (상품표 SKUS 와 적용 함수들을 그대로 옮겨 왔습니다. 한쪽을 고치면 다른 쪽도 고치세요.)
+// 회선 만들기 · 연장 · 2인→4인 올리기 · 긴급 구독(+덤) · 프로 · 게재 · 추가 사용량 · 체험 중 첫 구매 덤
+// 
+// 🔴 하나의 함수가 네 가지를 받습니다
+// POST JSON { action:'inicis_prepare', sku, opts, buyername, ... }   국내카드 결제창 정보 (로그인 필요)
+// POST form (이니시스가 돌려보냄)                                     승인 → 적용 → 이용권 화면으로
+// POST JSON { action:'paypal_create', sku, opts }                    PayPal 주문 (로그인 필요)
+// POST JSON { action:'paypal_capture', orderID }                     PayPal 승인 → 적용
+// 
+// 🔴 웹은 돈이 먼저 빠져나가 "받지 않기" 를 할 수 없습니다.
+// 그래서 게재(프로 필요) · 추가 사용량(내 회선인지) 은 **결제 전에** 확인하고 막습니다.
+// 
+// ⚠ Verify JWT 를 **끕니다.** 이니시스가 결제 뒤 이 함수로 돌아올 때 로그인 열쇠가 없습니다.
+// (결제 준비 · 주문은 함수 안에서 로그인을 직접 확인합니다)
+// ⚠ 비밀값은 기존 것을 그대로 씁니다: INICIS_MID · INICIS_PRO_HASHKEY · PAYPAL_CLIENT_ID ·
+// PAYPAL_CLIENT_SECRET · PAYPAL_MODE · SITE_BASE_URL
+// =====================================================================
 
-   🔴 상품 · 값 · 적용 규칙은 aliascall-google-verify 와 **똑같습니다.**
-      (상품표 SKUS 와 적용 함수들을 그대로 옮겨 왔습니다. 한쪽을 고치면 다른 쪽도 고치세요.)
-      회선 만들기 · 연장 · 2인→4인 올리기 · 긴급 구독(+덤) · 프로 · 게재 · 추가 사용량 · 체험 중 첫 구매 덤
-
-   🔴 하나의 함수가 네 가지를 받습니다
-      POST JSON { action:'inicis_prepare', sku, opts, buyername, ... }   국내카드 결제창 정보 (로그인 필요)
-      POST form (이니시스가 돌려보냄)                                     승인 → 적용 → 이용권 화면으로
-      POST JSON { action:'paypal_create', sku, opts }                    PayPal 주문 (로그인 필요)
-      POST JSON { action:'paypal_capture', orderID }                     PayPal 승인 → 적용
-
-   🔴 웹은 돈이 먼저 빠져나가 "받지 않기" 를 할 수 없습니다.
-      그래서 게재(프로 필요) · 추가 사용량(내 회선인지) 은 **결제 전에** 확인하고 막습니다.
-
-   ⚠ Verify JWT 를 **끕니다.** 이니시스가 결제 뒤 이 함수로 돌아올 때 로그인 열쇠가 없습니다.
-     (결제 준비 · 주문은 함수 안에서 로그인을 직접 확인합니다)
-   ⚠ 비밀값은 기존 것을 그대로 씁니다: INICIS_MID · INICIS_PRO_HASHKEY · PAYPAL_CLIENT_ID ·
-     PAYPAL_CLIENT_SECRET · PAYPAL_MODE · SITE_BASE_URL
-   ===================================================================== */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
