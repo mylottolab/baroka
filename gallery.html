@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>차 갤러리 · 바로카</title>
+<meta name="description" content="내 차 자랑 · 차와 함께한 풍경 · 차 관리 팁. 바로카 차주들의 갤러리">
+<meta name="theme-color" content="#13214A">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="baroka_icon_192.png">
+<link rel="apple-touch-icon" href="baroka_icon_192.png">
+<link rel="stylesheet" href="baroka.css?v=20261103b">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+  .g-tabs{display:flex;gap:6px;background:var(--bk-card);padding:5px;border-radius:14px;box-shadow:var(--bk-shadow)}
+  .g-tabs button{flex:1;height:42px;border:none;border-radius:10px;background:transparent;color:var(--bk-sub);font-weight:900;font-size:15px;cursor:pointer}
+  .g-tabs button.on{background:var(--bk-navy);color:#fff}
+  .g-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+  .g-chips button{flex:none;height:34px;padding:0 13px;border-radius:999px;border:1.5px solid var(--bk-line);background:var(--bk-card);color:var(--bk-ink);font-weight:800;font-size:13.5px;cursor:pointer}
+  .g-chips button.on{background:var(--bk-ink);border-color:var(--bk-ink);color:#fff}
+  .g-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .g-item{position:relative;border:none;padding:0;border-radius:14px;overflow:hidden;background:var(--bk-line);aspect-ratio:1/1;cursor:pointer;display:block}
+  .g-item img{width:100%;height:100%;object-fit:cover;display:block}
+  .g-item .cap{position:absolute;left:0;right:0;bottom:0;padding:18px 9px 7px;background:linear-gradient(transparent,rgba(0,0,0,.6));color:#fff;font-size:12px;font-weight:700;text-align:left;display:flex;gap:6px;align-items:flex-end}
+  .g-item .cap span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .g-item .lock{position:absolute;top:7px;left:7px;background:rgba(11,18,32,.7);color:#fff;font-size:11px;font-weight:900;border-radius:7px;padding:2px 6px}
+  .g-item.add{background:transparent;border:2px dashed var(--bk-line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--bk-sub);font-weight:900}
+  .g-item.add b{font-size:30px;line-height:1}
+  .g-cap{display:flex;align-items:center;gap:10px}
+  .g-cap .bar{flex:1;height:10px;border-radius:5px;background:var(--bk-line);overflow:hidden}
+  .g-cap .bar i{display:block;height:10px;background:var(--bk-navy)}
+  .g-view img{width:100%;border-radius:14px;display:block;background:#000;max-height:62vh;object-fit:contain}
+  .g-acts{display:flex;gap:8px;flex-wrap:wrap}
+  .g-acts button{height:42px;padding:0 14px;border-radius:12px;border:2px solid var(--bk-line);background:var(--bk-card);color:var(--bk-ink);font-weight:800;cursor:pointer}
+  .g-acts .like.on{border-color:#E0457B;color:#E0457B}
+  .g-ed{position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
+  .g-ed canvas{width:100%;border-radius:12px;display:block;background:#000}
+  .g-kinds{display:flex;gap:6px}
+  .g-kinds button{flex:1;height:40px;border-radius:10px;border:2px solid var(--bk-line);background:var(--bk-card);color:var(--bk-ink);font-weight:800;cursor:pointer}
+  .g-kinds button.on{border-color:var(--bk-navy);background:var(--bk-navy);color:#fff}
+</style>
+</head>
+<body>
+<div class="bk-shell">
+  <aside class="bk-rail"><div class="bk-ads" data-n="5"></div></aside>
+  <main class="bk-main">
+    <header class="bk-top">
+      <a class="bk-back" href="index.html" aria-label="처음 화면">‹</a>
+      <h1 class="bk-h1">🚘 차 갤러리</h1>
+    </header>
+    <div class="g-tabs" role="tablist">
+      <button type="button" id="tAll" class="on">모두의 갤러리</button>
+      <button type="button" id="tMine">내 갤러리</button>
+    </div>
+    <div class="bk-msg" id="msg"></div>
+
+    <!-- 모두의 갤러리 -->
+    <section id="all" style="display:flex;flex-direction:column;gap:12px">
+      <p class="bk-sub">바로카 차주들이 올린 내 차 자랑 · 차와 함께한 풍경 · 차 관리 팁. 차 번호는 보이지 않아요.</p>
+      <div class="g-chips" id="chips">
+        <button type="button" data-k="" class="on">전체</button><button type="button" data-k="car">🚗 내 차</button>
+        <button type="button" data-k="scene">🏞 풍경</button><button type="button" data-k="tip">🔧 팁</button>
+      </div>
+      <div class="bk-ads bk-ads-inline" data-n="2"></div>
+      <div class="g-grid" id="feed"></div>
+      <button class="bk-btn ghost sm bk-hide" id="more" type="button">더 보기</button>
+      <p class="bk-sub bk-hide" id="empty" style="text-align:center;padding:20px 0">아직 올라온 사진이 없어요.<br>첫 사진의 주인공이 되어 보세요!</p>
+    </section>
+
+    <!-- 내 갤러리 -->
+    <section id="mine" class="bk-hide" style="display:flex;flex-direction:column;gap:12px">
+      <div class="bk-card" id="mineHead"></div>
+      <div class="g-grid" id="mineGrid"></div>
+      <section class="bk-card" id="buy">
+        <h2>액자 더 사기</h2>
+        <p class="bk-sub">한 번 사면 기한 없이 계속 써요. 사진을 지우면 칸이 다시 비어요.</p>
+        <div class="bk-row">
+          <button class="bk-btn blue sm" id="b20" type="button">20칸 · 1,100원</button>
+          <button class="bk-btn sm" id="b60" type="button">60칸 · 2,200원</button>
+        </div>
+      </section>
+    </section>
+
+    <input type="file" id="file" accept="image/*" class="bk-hide">
+    <footer class="bk-foot">사진은 올린 분의 것입니다. 남의 얼굴 · 번호판 · 집이 드러나는 사진은 가려 주세요.<br>문제 있는 사진은 [🚩 신고]로 알려 주세요 · <a href="terms.html">이용약관</a></footer>
+  </main>
+  <aside class="bk-rail"><div class="bk-ads" data-n="5"></div></aside>
+</div>
+
+<script src="baroka.js?v=20261103b"></script>
+<script src="aliascall_web_pay.js"></script>
+<script src="aliascall_store.js"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var PUB = BK.URL + '/storage/v1/object/public/baroka-gallery/';
+  var KIND = { car: '🚗 내 차', scene: '🏞 풍경', tip: '🔧 팁' };
+  var feed = [], kind = '', last = null, ME = null, mineSt = null;
+  function say(t, k){ var m = $('msg'); m.className = 'bk-msg on ' + (k || 'info'); m.textContent = t; }
+  function hush(){ $('msg').className = 'bk-msg'; }
+  function src(p){ return PUB + p.split('/').map(encodeURIComponent).join('/'); }
+  function won(n){ return Number(n || 0).toLocaleString('ko-KR') + '원'; }
+
+  /* ── 탭 ── */
+  function tab(m){
+    $('tAll').classList.toggle('on', !m); $('tMine').classList.toggle('on', !!m);
+    $('all').classList.toggle('bk-hide', !!m); $('mine').classList.toggle('bk-hide', !m);
+    history.replaceState(null, '', m ? 'gallery.html?mine=1' : 'gallery.html');
+    hush();
+    if (m) loadMine(); else if (!feed.length) loadFeed(true);
+  }
+  $('tAll').onclick = function(){ tab(false); };
+  $('tMine').onclick = function(){ tab(true); };
+  $('chips').querySelectorAll('button').forEach(function(b){
+    b.onclick = function(){
+      $('chips').querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); });
+      kind = b.getAttribute('data-k'); loadFeed(true);
+    };
+  });
+
+  /* ── 모두의 갤러리 ── */
+  async function loadFeed(reset){
+    if (reset) { feed = []; last = null; $('feed').innerHTML = ''; }
+    var r = await BK.sb.rpc('baroka_gallery_feed', { p_before: last, p_limit: 30, p_kind: kind || null });
+    var list = (r.data || []);
+    feed = feed.concat(list);
+    if (list.length) last = list[list.length - 1].at;
+    $('feed').insertAdjacentHTML('beforeend', list.map(function(p, i){
+      return '<button type="button" class="g-item" data-i="' + (feed.length - list.length + i) + '"><img loading="lazy" alt="" src="' + src(p.thumb) + '">' +
+        '<span class="cap"><span>' + BK.esc(p.caption || KIND[p.kind] || '') + '</span>' + (p.likes ? '♥ ' + p.likes : '') + '</span></button>';
+    }).join(''));
+    $('feed').querySelectorAll('.g-item:not([data-w])').forEach(function(b){ b.setAttribute('data-w', 1); b.onclick = function(){ view(feed[+b.getAttribute('data-i')]); }; });
+    $('more').classList.toggle('bk-hide', list.length < 30);
+    $('empty').classList.toggle('bk-hide', feed.length > 0);
+  }
+  $('more').onclick = function(){ loadFeed(false); };
+
+  function view(p){
+    var s = BK.sheet('<div class="g-view"><img alt="" src="' + src(p.path) + '"></div>' +
+      '<div style="display:flex;align-items:center;gap:8px"><b style="flex:1">' + BK.esc(p.nick || '') + '</b><span class="bk-tag">' + (KIND[p.kind] || '') + '</span></div>' +
+      (p.caption ? '<p class="bk-sub" style="color:var(--bk-ink);white-space:pre-line">' + BK.esc(p.caption) + '</p>' : '') +
+      '<div class="g-acts"><button type="button" class="like' + (p.liked ? ' on' : '') + '" id="vLike">♥ ' + (p.likes || 0) + '</button>' +
+      (p.mine ? '' : '<button type="button" id="vRep">🚩 신고</button><button type="button" id="vBlock">🚫 이 분 사진 안 보기</button>') +
+      '<button type="button" id="vClose" style="margin-left:auto">닫기</button></div>');
+    s.el.querySelector('#vClose').onclick = s.close;
+    s.el.querySelector('#vLike').onclick = async function(){
+      if (!ME) { s.close(); say('♥ 를 누르려면 로그인해 주세요. [내 차]에서 로그인할 수 있어요.'); return; }
+      var r = await BK.sb.rpc('baroka_gallery_like', { p_id: p.id });
+      if (r.data && r.data.ok) { p.liked = r.data.on; p.likes = r.data.likes; this.textContent = '♥ ' + p.likes; this.classList.toggle('on', p.liked); }
+    };
+    var rep = s.el.querySelector('#vRep');
+    if (rep) rep.onclick = async function(){
+      if (!ME) { s.close(); say('신고하려면 로그인해 주세요.'); return; }
+      var why = prompt('어떤 문제가 있나요? (예: 음란 · 남의 번호판 · 광고 · 기타)', ''); if (why === null) return;
+      await BK.sb.rpc('baroka_gallery_report', { p_id: p.id, p_reason: why });
+      s.close(); BK.toast('신고했어요. 확인 후 조치할게요.');
+    };
+    var blk = s.el.querySelector('#vBlock');
+    if (blk) blk.onclick = async function(){
+      if (!ME) { s.close(); say('로그인해 주세요.'); return; }
+      if (!confirm('이 분의 사진을 더 이상 보지 않을까요?')) return;
+      await BK.sb.rpc('baroka_gallery_block', { p_photo: p.id }); s.close(); loadFeed(true);
+    };
+  }
+
+  /* ── 내 갤러리 ── */
+  async function loadMine(){
+    if (!ME) {
+      $('mineHead').innerHTML = '<h2>내 갤러리</h2><p class="bk-sub">사진을 올리려면 로그인해 주세요. 바로카에 차를 등록하면 액자 4칸이 무료예요.</p><a class="bk-btn blue" href="my.html?login=1">로그인 · 내 차 등록</a>';
+      $('mineGrid').innerHTML = ''; $('buy').classList.add('bk-hide'); return;
+    }
+    var r = await BK.sb.rpc('baroka_gallery_mine');
+    if (r.error || !r.data.ok) { say('불러오지 못했어요.', 'bad'); return; }
+    mineSt = r.data;
+    $('buy').classList.toggle('bk-hide', !mineSt.can_post);
+    $('b20').textContent = '20칸 · ' + won(mineSt.price_g20); $('b60').textContent = '60칸 · ' + won(mineSt.price_g60);
+    if (!mineSt.can_post) {
+      $('mineHead').innerHTML = '<h2>내 갤러리</h2><p class="bk-sub">사진은 바로카에 차를 등록한 분이 올릴 수 있어요. 차를 등록하면 <b>액자 4칸이 무료</b>예요.</p><a class="bk-btn blue" href="my.html?new=1">내 차 등록하기</a>';
+      $('mineGrid').innerHTML = ''; return;
+    }
+    var pct = mineSt.cap ? Math.min(100, Math.round(mineSt.used / mineSt.cap * 100)) : 0;
+    $('mineHead').innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between"><h2>' + BK.esc(mineSt.nick) + '님의 갤러리</h2><span class="bk-tag">' + mineSt.used + ' / ' + mineSt.cap + '칸</span></div>' +
+      '<div class="g-cap"><div class="bar"><i style="width:' + pct + '%"></i></div></div>' +
+      '<p class="bk-sub">🔒 표시는 나만 보는 사진이에요. 사진을 누르면 설명 · 공개 · 지우기를 바꿀 수 있어요.</p>';
+    var full = mineSt.used >= mineSt.cap;
+    $('mineGrid').innerHTML = '<button type="button" class="g-item add" id="addBtn"><b>＋</b>' + (full ? '칸이 다 찼어요' : '사진 올리기') + '</button>' +
+      mineSt.photos.map(function(p, i){
+        return '<button type="button" class="g-item" data-m="' + i + '"><img loading="lazy" alt="" src="' + src(p.thumb) + '">' +
+          (!p.public ? '<span class="lock">🔒 나만</span>' : (p.hidden ? '<span class="lock">숨김(신고)</span>' : '')) +
+          '<span class="cap"><span>' + BK.esc(p.caption || KIND[p.kind] || '') + '</span>' + (p.likes ? '♥ ' + p.likes : '') + '</span></button>';
+      }).join('');
+    $('addBtn').onclick = function(){
+      if (full) { $('buy').scrollIntoView({ behavior: 'smooth' }); BK.toast('액자를 더 사면 계속 올릴 수 있어요'); return; }
+      firstNote(function(){ $('file').click(); });
+    };
+    $('mineGrid').querySelectorAll('[data-m]').forEach(function(b){ b.onclick = function(){ editMine(mineSt.photos[+b.getAttribute('data-m')]); }; });
+  }
+
+  function firstNote(go){
+    var k = 'baroka_gallery_note'; var seen = false; try { seen = !!localStorage.getItem(k); } catch (e) {}
+    if (seen) return go();
+    var s = BK.sheet('<h3>올리기 전에 잠깐!</h3><ul class="bk-sub" style="color:var(--bk-ink);padding-left:18px;margin:0">' +
+      '<li><b>번호판</b>이 보이면 다음 화면에서 손가락으로 네모를 그려 가려 주세요(남의 차 번호판도요).</li>' +
+      '<li><b>집 · 회사</b>가 드러나는 사진은 조심하세요.</li><li><b>촬영 장소 정보</b>는 저절로 지워져요.</li>' +
+      '<li>기본은 <b>모두에게 보이기</b>예요. 끄면 나만 보는 사진이 돼요.</li></ul>' +
+      '<button class="bk-btn blue" type="button" id="nOk">알겠어요</button>');
+    s.el.querySelector('#nOk').onclick = function(){ try { localStorage.setItem(k, '1'); } catch (e) {} s.close(); go(); };
+  }
+
+  /* 사진 고르기 → 줄이기(촬영 정보 지워짐) → 번호판 가리기 → 올리기 */
+  $('file').onchange = function(){
+    var f = this.files && this.files[0]; this.value = '';
+    if (!f) return;
+    var url = URL.createObjectURL(f), img = new Image();
+    img.onload = function(){ URL.revokeObjectURL(url); editor(img); };
+    img.onerror = function(){ say('이 사진은 열 수 없어요. 다른 사진을 골라 주세요.', 'bad'); };
+    img.src = url;
+  };
+  function fit(img, max){
+    var w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+    return { w: Math.round(w * k), h: Math.round(h * k) };
+  }
+  function editor(img){
+    var sz = fit(img, 1600), boxes = [], kd = 'car';
+    var s = BK.sheet('<h3>사진 올리기</h3>' +
+      '<p class="bk-sub" style="margin:0">번호판 · 얼굴이 보이면 <b>손가락으로 네모를 그려</b> 가려 주세요.</p>' +
+      '<div class="g-ed"><canvas id="cv"></canvas></div>' +
+      '<div class="bk-row"><button class="bk-btn ghost sm" type="button" id="undo">↩ 가리기 하나 취소</button></div>' +
+      '<div class="g-kinds" id="kinds"><button type="button" data-k="car" class="on">🚗 내 차</button><button type="button" data-k="scene">🏞 풍경</button><button type="button" data-k="tip">🔧 팁</button></div>' +
+      '<textarea class="bk-in" id="cap" maxlength="200" rows="2" style="height:auto;padding:10px 12px;font-size:15.5px" placeholder="한마디 (예: 첫 차 1주년! · 와이퍼 교체 팁)"></textarea>' +
+      '<label style="display:flex;gap:10px;align-items:center;font-weight:800"><input type="checkbox" id="pub" checked style="width:22px;height:22px"> 모두에게 보이기</label>' +
+      '<div class="bk-msg" id="eMsg"></div>' +
+      '<button class="bk-btn blue" type="button" id="up">올리기</button>');
+    var cv = s.el.querySelector('#cv'), cx = cv.getContext('2d');
+    cv.width = sz.w; cv.height = sz.h;
+    function pix(b){   // 가린 곳을 굵은 모자이크로
+      var x = Math.max(0, Math.round(Math.min(b.x1, b.x2))), y = Math.max(0, Math.round(Math.min(b.y1, b.y2)));
+      var w = Math.round(Math.abs(b.x2 - b.x1)), h = Math.round(Math.abs(b.y2 - b.y1));
+      if (w < 4 || h < 4) return;
+      var c = Math.max(8, Math.round(Math.max(sz.w, sz.h) / 60));
+      var d = cx.getImageData(x, y, Math.min(w, sz.w - x), Math.min(h, sz.h - y));
+      for (var yy = 0; yy < d.height; yy += c) for (var xx = 0; xx < d.width; xx += c) {
+        var i = (yy * d.width + xx) * 4;
+        cx.fillStyle = 'rgb(' + d.data[i] + ',' + d.data[i + 1] + ',' + d.data[i + 2] + ')';
+        cx.fillRect(x + xx, y + yy, Math.min(c, d.width - xx), Math.min(c, d.height - yy));
+      }
+    }
+    function paint(live){
+      cx.drawImage(img, 0, 0, sz.w, sz.h);
+      boxes.forEach(pix);
+      if (live) { cx.strokeStyle = '#FFC400'; cx.lineWidth = Math.max(3, sz.w / 200); cx.strokeRect(live.x1, live.y1, live.x2 - live.x1, live.y2 - live.y1); }
+    }
+    paint();
+    var cur = null;
+    function at(e){ var r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * sz.w / r.width, y: (e.clientY - r.top) * sz.h / r.height }; }
+    cv.addEventListener('pointerdown', function(e){ var p = at(e); cur = { x1: p.x, y1: p.y, x2: p.x, y2: p.y }; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener('pointermove', function(e){ if (!cur) return; var p = at(e); cur.x2 = p.x; cur.y2 = p.y; paint(cur); });
+    cv.addEventListener('pointerup', function(){ if (cur) { boxes.push(cur); cur = null; paint(); } });
+    s.el.querySelector('#undo').onclick = function(){ boxes.pop(); paint(); };
+    s.el.querySelectorAll('#kinds button').forEach(function(b){ b.onclick = function(){
+      s.el.querySelectorAll('#kinds button').forEach(function(x){ x.classList.toggle('on', x === b); }); kd = b.getAttribute('data-k'); }; });
+    s.el.querySelector('#up').onclick = async function(){
+      var b = this, m = s.el.querySelector('#eMsg'); b.disabled = true; b.textContent = '올리는 중…';
+      var paths = [];
+      try {
+        paint();
+        var big = await new Promise(function(res){ cv.toBlob(res, 'image/jpeg', 0.85); });
+        var t = document.createElement('canvas'), ts = { w: Math.round(sz.w * Math.min(1, 480 / Math.max(sz.w, sz.h))), h: 0 };
+        ts.h = Math.round(sz.h * ts.w / sz.w); t.width = ts.w; t.height = ts.h; t.getContext('2d').drawImage(cv, 0, 0, ts.w, ts.h);
+        var small = await new Promise(function(res){ t.toBlob(res, 'image/jpeg', 0.8); });
+        var id = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '_' + Math.random().toString(36).slice(2));
+        var p1 = ME.id + '/' + id + '.jpg', p2 = ME.id + '/' + id + '_t.jpg';
+        var st = BK.sb.storage.from('baroka-gallery');
+        var u1 = await st.upload(p1, big, { contentType: 'image/jpeg' }); if (u1.error) throw u1.error; paths.push(p1);
+        var u2 = await st.upload(p2, small, { contentType: 'image/jpeg' }); if (u2.error) throw u2.error; paths.push(p2);
+        var r = await BK.sb.rpc('baroka_gallery_add', { p_path: p1, p_thumb: p2, p_w: sz.w, p_h: sz.h,
+          p_caption: s.el.querySelector('#cap').value.trim(), p_kind: kd, p_public: s.el.querySelector('#pub').checked });
+        if (r.error || !r.data.ok) throw new Error({ full: '칸이 다 찼어요. 액자를 더 사 주세요.', no_car: '차를 먼저 등록해 주세요.' }[r.data && r.data.error] || (r.error && r.error.message) || '올리지 못했어요');
+        s.close(); BK.toast('올렸어요!'); loadMine(); feed = [];
+      } catch (e) {
+        if (paths.length) { try { await BK.sb.storage.from('baroka-gallery').remove(paths); } catch (x) {} }
+        m.className = 'bk-msg on bad'; m.textContent = String(e.message || e);
+        b.disabled = false; b.textContent = '올리기';
+      }
+    };
+  }
+
+  function editMine(p){
+    var s = BK.sheet('<div class="g-view"><img alt="" src="' + src(p.path) + '"></div>' +
+      (p.hidden ? '<div class="bk-msg on bad">신고가 들어와 다른 분들에게는 숨겨졌어요. 운영자가 확인 중이에요.</div>' : '') +
+      '<textarea class="bk-in" id="eCap" maxlength="200" rows="2" style="height:auto;padding:10px 12px;font-size:15.5px">' + BK.esc(p.caption || '') + '</textarea>' +
+      '<label style="display:flex;gap:10px;align-items:center;font-weight:800"><input type="checkbox" id="ePub"' + (p.public ? ' checked' : '') + ' style="width:22px;height:22px"> 모두에게 보이기</label>' +
+      '<div class="bk-row"><button class="bk-btn blue sm" type="button" id="eSave">저장</button><button class="bk-btn ghost sm" type="button" id="eDel">🗑 지우기</button></div>' +
+      '<p class="bk-sub" style="text-align:center">♥ ' + (p.likes || 0) + ' · ' + new Date(p.at).toLocaleDateString('ko-KR') + '</p>');
+    s.el.querySelector('#eSave').onclick = async function(){
+      await BK.sb.rpc('baroka_gallery_edit', { p_id: p.id, p_caption: s.el.querySelector('#eCap').value.trim(), p_public: s.el.querySelector('#ePub').checked });
+      s.close(); loadMine(); feed = [];
+    };
+    s.el.querySelector('#eDel').onclick = async function(){
+      if (!confirm('이 사진을 지울까요? 칸이 다시 비어요.')) return;
+      var r = await BK.sb.rpc('baroka_gallery_delete', { p_id: p.id });
+      if (r.data && r.data.ok) { try { await BK.sb.storage.from('baroka-gallery').remove([r.data.path, r.data.thumb]); } catch (e) {} }
+      s.close(); loadMine(); feed = [];
+    };
+  }
+
+  /* 액자 사기 */
+  async function buy(sku){
+    if (window.ACStore && ACStore.inApp()) {
+      ACStore.onDone = function(r){ if (r.ok) { BK.toast('액자를 늘렸어요'); loadMine(); } else if (!r.canceled) say('결제를 마치지 못했어요. ' + (r.error || ''), 'bad'); };
+      ACStore.buy(sku, {}); return;
+    }
+    await ACWeb.inicis(BK.sb, sku, {}, { buyername: (mineSt && mineSt.nick) || '회원' });
+  }
+  $('b20').onclick = function(){ buy('baroka_g20'); };
+  $('b60').onclick = function(){ buy('baroka_g60'); };
+
+  (async function(){
+    ME = await BK.user();
+    var q = new URLSearchParams(location.search);
+    if (q.get('webpaid') === '1') BK.toast('액자를 늘렸어요');
+    if (q.get('webpaid') === '0') say('결제를 마치지 못했어요. ' + (q.get('msg') || ''), 'bad');
+    tab(q.get('mine') === '1');
+    BK.ads(Array.prototype.slice.call(document.querySelectorAll('.bk-ads')));
+  })();
+})();
+</script>
+</body>
+</html>

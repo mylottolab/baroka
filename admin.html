@@ -64,6 +64,13 @@
     </section>
 
     <section class="bk-card">
+      <h2>차 갤러리 — 신고된 사진</h2>
+      <p class="bk-sub" id="phSum"></p>
+      <div class="bk-row"><button class="mini" id="phRep" type="button">신고 · 숨김만</button><button class="mini" id="phAll" type="button">최근 전체</button></div>
+      <div id="photos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px"></div>
+    </section>
+
+    <section class="bk-card">
       <h2>등록권 · 번호변경권 드리기</h2>
       <p class="bk-sub">시험 · 보상 · 홍보용. 받는 분의 닉네임을 넣습니다.</p>
       <div class="f">
@@ -101,6 +108,7 @@
     $('st').innerHTML = [['등록된 차', d.cars], ['최근 7일', d.cars_7d], ['결제된 권', d.paid], ['번호 변경', d.changes], ['처분(지움)', d.removed], ['안 쓴 권', d.credits_unused]]
       .map(function(x){ return '<div><b>' + x[1] + '</b>' + x[0] + '</div>'; }).join('');
     $('pReg').value = d.price_reg; $('pChg').value = d.price_change;
+    photos('reported');
     ADS = d.ads || [];
     $('ads').innerHTML = ADS.length ? ADS.map(function(a){
       return '<tr><td><b>' + BK.esc(a.title) + '</b><br><small>' + BK.esc(a.sub) + (a.advertiser ? ' · ' + BK.esc(a.advertiser) : '') + '</small><br><small>' + ((a.apps || ['baroka']).map(function(x){ return x === 'baronu' ? '바로너' : '바로카'; }).join(' · ')) + '</small>' + (a.active ? '' : ' <span class="bk-tag y">숨김</span>') + '</td>' +
@@ -158,6 +166,28 @@
     var r = await BK.sb.rpc('baroka_admin_prices', { p_reg: Number($('pReg').value), p_change: Number($('pChg').value) });
     say(r.error || !r.data.ok ? '저장하지 못했어요' : '저장했어요.', r.error ? 'bad' : 'ok');
   };
+  var PUBG = BK.URL + '/storage/v1/object/public/baroka-gallery/';
+  async function photos(show){
+    var r = await BK.sb.rpc('baroka_admin_photos', { p_show: show || 'reported' });
+    if (r.error || !r.data.ok) return;
+    $('phSum').textContent = '전체 ' + r.data.total + '장 · 공개 ' + r.data.public + '장';
+    $('photos').innerHTML = r.data.photos.length ? r.data.photos.map(function(p){
+      return '<div style="border:1.5px solid var(--bk-line);border-radius:12px;overflow:hidden;font-size:12px">' +
+        '<a href="' + PUBG + p.path + '" target="_blank"><img src="' + PUBG + p.thumb + '" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block"></a>' +
+        '<div style="padding:6px"><b>' + BK.esc(p.nick) + '</b> · 신고 ' + p.reports + (p.hidden ? ' · <b style="color:#C8321E">숨김</b>' : '') + (p.public ? '' : ' · 나만') +
+        '<br>' + BK.esc(p.caption || '') + (p.reasons ? '<br><small>사유: ' + BK.esc(p.reasons) + '</small>' : '') +
+        '<div style="display:flex;gap:4px;margin-top:5px"><button class="mini" data-p="' + p.id + '" data-a="' + (p.hidden ? 'show' : 'hide') + '">' + (p.hidden ? '다시 보이기' : '숨기기') + '</button>' +
+        '<button class="mini" data-p="' + p.id + '" data-a="delete">지우기</button></div></div></div>';
+    }).join('') : '<p class="bk-sub">없어요.</p>';
+    $('photos').querySelectorAll('[data-p]').forEach(function(b){ b.onclick = async function(){
+      var a = b.getAttribute('data-a'); if (a === 'delete' && !confirm('이 사진을 지울까요?')) return;
+      var x = await BK.sb.rpc('baroka_admin_photo', { p_id: b.getAttribute('data-p'), p_action: a });
+      if (a === 'delete' && x.data && x.data.path) { try { await BK.sb.storage.from('baroka-gallery').remove([x.data.path, x.data.thumb]); } catch (e) {} }
+      photos(show);
+    }; });
+  }
+  $('phRep').onclick = function(){ photos('reported'); };
+  $('phAll').onclick = function(){ photos('all'); };
   $('go').onclick = async function(){
     var r = await BK.login($('nick').value, $('pw').value);
     if (!r.ok) say(r.error, 'bad'); else load();

@@ -17,7 +17,7 @@
 create table if not exists public.baroka_credits (
   id          bigserial primary key,
   user_id     uuid not null references auth.users(id) on delete cascade,
-  kind        text not null check (kind in ('reg', 'change')),
+  kind        text not null check (kind in ('reg', 'change', 'g20', 'g60')),   -- g20 · g60: 차 갤러리 액자 20칸 · 60칸
   source      text not null default 'web',        -- web · google · apple · grant(관리자)
   payment_id  uuid,                                -- payments.id (결제로 생긴 것)
   note        text,
@@ -207,7 +207,7 @@ create or replace function public.baroka_grant_paid(p_user uuid, p_kind text, p_
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare v_id bigint;
 begin
-  if p_kind not in ('reg', 'change') then return jsonb_build_object('ok', false, 'error', 'bad_kind'); end if;
+  if p_kind not in ('reg', 'change', 'g20', 'g60') then return jsonb_build_object('ok', false, 'error', 'bad_kind'); end if;
   select id into v_id from baroka_credits where payment_id = p_payment;
   if v_id is not null then return jsonb_build_object('ok', true, 'already', true, 'credit', v_id); end if;
   insert into baroka_credits (user_id, kind, source, payment_id) values (p_user, p_kind, coalesce(p_source, 'web'), p_payment)
@@ -301,7 +301,7 @@ returns jsonb language plpgsql security definer set search_path = public as $$
 declare v_user uuid; i int;
 begin
   if not coalesce(is_global_admin(), false) then return jsonb_build_object('ok', false, 'error', 'not_admin'); end if;
-  if p_kind not in ('reg', 'change') then return jsonb_build_object('ok', false, 'error', 'bad_kind'); end if;
+  if p_kind not in ('reg', 'change', 'g20', 'g60') then return jsonb_build_object('ok', false, 'error', 'bad_kind'); end if;
   select id into v_user from profiles where lower(nickname) = lower(trim(p_nickname)) limit 1;
   if v_user is null then return jsonb_build_object('ok', false, 'error', 'no_user'); end if;
   for i in 1 .. greatest(1, least(coalesce(p_n, 1), 20)) loop
