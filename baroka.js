@@ -66,32 +66,53 @@
   };
   BK.logout = async function(){ try { await BK.sb.auth.signOut(); } catch (e) {} };
 
-  /* 광고 타일 — boxes 안에 그립니다. 광고가 모자라면 "광고 문의" 빈 타일 */
-  var adsP = null;
-  BK.ads = async function(boxes, min){
+  /* 광고 타일 — 2026-11-03
+     · 화면에 보이는 칸(넓은 화면: 양옆 5칸씩 · 휴대폰: 가운데 두 칸씩)을 모두 세어 광고를 나눠 싣습니다.
+     · 광고가 칸보다 많으면 12초마다 다음 광고들로 바뀌며 전체가 돌아갑니다(순환). 화면을 안 볼 때는 멈춥니다.
+     · 누르면 광고주가 적어 준 쇼핑몰 · 누리집으로 갑니다(새 창). 보기 · 누름 숫자를 셉니다. */
+  var adsP = null, adT = null, adPage = 0, adStart = -1, adSeen = {};
+  function adHtml(a){
+    var img = a.image ? '<img alt="" loading="lazy" src="' + BK.esc(a.image) + '">' : '';
+    return '<a class="bk-ad' + (a.image ? ' img' : '') + '" data-ad="' + BK.esc(a.id) + '" href="' + BK.esc(a.link || '#') + '" target="_blank" rel="noopener sponsored"' +
+      (a.image ? '' : ' style="background:' + BK.esc(a.bg || '#fff') + '"') + '>' + img +
+      '<span class="ad">AD</span><span class="t">' + BK.esc(a.title) + '</span>' + (a.sub ? '<span class="s">' + BK.esc(a.sub) + '</span>' : '') + '</a>';
+  }
+  function adEmpty(){
+    return '<a class="bk-ad empty" href="' + (BK.CONTACT ? 'mailto:' + BK.CONTACT + '?subject=' + encodeURIComponent('바로카 광고 문의') : 'ad.html') + '"><span class="t">이 자리에<br>광고하세요</span><span class="s">광고 문의</span></a>';
+  }
+  BK.ads = async function(boxes){
     boxes = (boxes || []).filter(Boolean);
     if (!boxes.length) return;
     if (!adsP) adsP = BK.sb.rpc('baroka_ads_list', { p_app: 'baroka' }).then(function(r){ return r.data || []; }, function(){ return []; });
     var list = await adsP;
-    var seen = {};
-    boxes.forEach(function(box, bi){
-      var want = Number(box.getAttribute('data-n') || min || 4);
-      var mine = list.length ? list.slice((bi * want) % list.length).concat(list).slice(0, Math.min(want, list.length)) : [];
-      var h = mine.map(function(a){
-        if (!seen[a.id]) { seen[a.id] = 1; try { BK.sb.rpc('baroka_ad_hit', { p_id: a.id, p_click: false }); } catch (e) {} }
-        var img = a.image ? '<img alt="" loading="lazy" src="' + BK.esc(a.image) + '">' : '';
-        return '<a class="bk-ad' + (a.image ? ' img' : '') + '" data-ad="' + BK.esc(a.id) + '" href="' + BK.esc(a.link || '#') + '" target="_blank" rel="noopener sponsored"' +
-          (a.image ? '' : ' style="background:' + BK.esc(a.bg || '#fff') + '"') + '>' + img +
-          '<span class="ad">AD</span><span class="t">' + BK.esc(a.title) + '</span>' + (a.sub ? '<span class="s">' + BK.esc(a.sub) + '</span>' : '') + '</a>';
-      }).join('');
-      for (var i = mine.length; i < Math.min(want, 2); i++) {
-        h += '<a class="bk-ad empty" href="' + (BK.CONTACT ? 'mailto:' + BK.CONTACT + '?subject=' + encodeURIComponent('바로카 광고 문의') : 'ad.html') + '"><span class="t">이 자리에<br>광고하세요</span><span class="s">광고 문의</span></a>';
-      }
-      box.innerHTML = h;
-      box.querySelectorAll('[data-ad]').forEach(function(el){
-        el.addEventListener('click', function(){ try { BK.sb.rpc('baroka_ad_hit', { p_id: el.getAttribute('data-ad'), p_click: true }); } catch (e) {} });
+    if (adStart < 0) adStart = list.length ? Math.floor(Math.random() * list.length) : 0;   // 매번 같은 광고가 맨 앞에 오지 않게
+    function draw(){
+      var wide = window.innerWidth >= 1000;   // 넓은 화면: 양옆 여백 칸 · 좁은 화면: 가운데 칸 (baroka.css 와 같은 기준)
+      var vis = boxes.filter(function(b){ return wide ? !b.classList.contains('bk-ads-inline') : !b.closest('.bk-rail'); });
+      var total = vis.reduce(function(n, b){ return n + Number(b.getAttribute('data-n') || 2); }, 0);
+      var k = 0, rotate = list.length > total;
+      vis.forEach(function(box){
+        var n = Number(box.getAttribute('data-n') || 2), h = '', empties = 0;
+        for (var i = 0; i < n; i++, k++) {
+          if (rotate || k < list.length) {
+            var a = list[(adStart + adPage * total + k) % list.length];
+            if (!adSeen[a.id]) { adSeen[a.id] = 1; try { BK.sb.rpc('baroka_ad_hit', { p_id: a.id, p_click: false }); } catch (e) {} }
+            h += adHtml(a);
+          } else if (empties < (n > 2 ? 1 : 2)) { h += adEmpty(); empties++; }
+        }
+        if (box.innerHTML !== h) {
+          box.style.transition = 'opacity .35s'; box.style.opacity = '0';
+          setTimeout(function(){ box.innerHTML = h; box.style.opacity = '1';
+            box.querySelectorAll('[data-ad]').forEach(function(el){
+              el.addEventListener('click', function(){ try { BK.sb.rpc('baroka_ad_hit', { p_id: el.getAttribute('data-ad'), p_click: true }); } catch (e) {} });
+            }); }, box.innerHTML ? 350 : 0);
+        }
       });
-    });
+      clearInterval(adT);
+      if (rotate) adT = setInterval(function(){ if (!document.hidden) { adPage++; draw(); } }, 12000);
+    }
+    draw();
+    var rt; window.addEventListener('resize', function(){ clearTimeout(rt); rt = setTimeout(draw, 300); });
   };
 
   /* 아래에서 올라오는 시트 */

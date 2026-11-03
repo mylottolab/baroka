@@ -278,8 +278,8 @@ main{ flex:1; display:flex; align-items:center; justify-content:center; padding:
   <div class="brand-row">
     <button class="back-btn" onclick="history.length > 1 ? history.back() : location.href='index.html'" aria-label="뒤로가기" data-i18n-aria="backBtn">←</button>
     <a href="index.html" class="brand-home-link">
-      <div class="brand-mark" style="width:auto;padding:0 6px;background:#fff;color:#0B1220;border:2px solid #0B1220;border-radius:6px;font-weight:900;font-size:12px;box-shadow:inset 5px 0 0 #1450F5;padding-left:9px">바로</div>
-      <div class="brand-name" style="font-weight:900">바로<em style="color:#1450F5">카</em></div>
+      <div class="brand-mark" style="width:auto;padding:0 6px;background:#fff;color:#0B1220;border:2px solid #0B1220;border-radius:6px;font-weight:900;font-size:12px;box-shadow:inset 5px 0 0 #1B2D6B;padding-left:9px">바로</div>
+      <div class="brand-name" style="font-weight:900">바로<em style="color:#1B2D6B">카</em></div>
     </a>
     <div class="lang-toggle" style="margin-left:auto;">
       <button data-lang="ko" class="active">KR</button>
@@ -351,6 +351,11 @@ main{ flex:1; display:flex; align-items:center; justify-content:center; padding:
       <!-- 🔴 2026-10-29 "나도 만들기" — 앱 없이 연락하는 분(로그인 안 한 분)에게만 보입니다 -->
       <a href="index.html?from=connect" id="mineLink" style="display:none;margin:14px auto 0;max-width:360px;padding:13px 14px;border-radius:14px;text-align:center;text-decoration:none;font-size:14px;font-weight:700;line-height:1.5;color:var(--teal-deep,#123F3D);background:var(--teal-tint,#E4EFEE);border:1px solid var(--line,#DCE3DE)">
         🔒 <span id="mineT1">이 연락은 번호 없이 보호되고 있어요</span><br><span id="mineT2" style="color:var(--coral,#E8734A)">내 차 · 물건 · 반려동물에도 무료로 만들기 ›</span></a>
+      <!-- 🔴 2026-11-03 바로카 타일 광고(연락 화면 아래 · 세 칸) -->
+      <div style="max-width:420px;margin:18px auto 0;padding:0 4px">
+        <div style="font-size:12px;font-weight:800;opacity:.6;margin:0 2px 6px">광고</div>
+        <div class="bk-ads" data-n="3" id="bkAdsConnect"></div>
+      </div>
     </div>
 
   </div>
@@ -2864,5 +2869,18 @@ async function acApplyConnectMode(regId){
 }
 </script>
 <script src="aliascall_brandhome.js?v=20261101"></script>
+<style>
+#bkAdsConnect{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#bkAdsConnect .bk-ad{position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-height:96px;border-radius:12px;overflow:hidden;text-decoration:none;color:#0B1220;border:1.5px solid #D8DEE8;background:#fff;padding:8px}
+#bkAdsConnect .bk-ad img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#bkAdsConnect .bk-ad.img::after{content:"";position:absolute;inset:40% 0 0 0;background:linear-gradient(transparent,rgba(0,0,0,.55))}
+#bkAdsConnect .t{position:relative;z-index:1;font-weight:900;font-size:12.5px;line-height:1.3}
+#bkAdsConnect .s{position:relative;z-index:1;font-size:11px;opacity:.8}
+#bkAdsConnect .bk-ad.img .t,#bkAdsConnect .bk-ad.img .s{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+#bkAdsConnect .ad{position:absolute;top:5px;right:5px;z-index:1;font-size:9px;font-weight:900;padding:1px 4px;border-radius:4px;background:rgba(11,18,32,.65);color:#fff}
+#bkAdsConnect .bk-ad.empty{border-style:dashed;background:transparent;align-items:center;justify-content:center;text-align:center;opacity:.7}
+</style>
+<script src="baroka.js?v=20261103b"></script>
+<script>try { BK.ads([document.getElementById('bkAdsConnect')]); } catch (e) {}</script>
 </body>
 </html>

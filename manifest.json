@@ -1,4 +1,4 @@
 { "name": "바로카", "short_name": "바로카", "start_url": "/index.html", "display": "standalone",
-  "background_color": "#EEF1F6", "theme_color": "#1450F5",
+  "background_color": "#EEF1F6", "theme_color": "#13214A",
   "icons": [ { "src": "/baroka_icon_192.png", "sizes": "192x192", "type": "image/png" },
              { "src": "/baroka_icon_512.png", "sizes": "512x512", "type": "image/png" } ] }

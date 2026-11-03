@@ -1,8 +1,8 @@
 /* 바로카 (baroka.kr) — 2026-11-03
-   에일리어스콜(초록 · 둥근 카드)과 다르게: 도로 표지 파랑 + 검정 + 번호판 흰색, 각진 굵은 글씨 */
+   에일리어스콜(초록 · 둥근 카드)과 다르게: 짙은 남색 바탕 + 흰 글씨 + 번호판 흰색 + 노란 단추 */
 :root{
   --bk-bg:#EEF1F6; --bk-card:#FFFFFF; --bk-ink:#0B1220; --bk-sub:#4A5568; --bk-line:#D8DEE8;
-  --bk-blue:#1450F5; --bk-blue-ink:#FFFFFF; --bk-blue-soft:#E3EBFF;
+  --bk-blue:#1B2D6B; --bk-blue-ink:#FFFFFF; --bk-blue-soft:#E4E9F7; --bk-navy:#13214A;
   --bk-yel:#FFC400; --bk-yel-ink:#1B1400;
   --bk-ok:#0E8A4F; --bk-bad:#C8321E;
   --bk-plate:#FFFFFF; --bk-plate-ink:#0B1220; --bk-plate-edge:#0B1220;
@@ -11,7 +11,7 @@
 @media (prefers-color-scheme: dark){
   :root{
     --bk-bg:#0A0F1A; --bk-card:#141B29; --bk-ink:#EEF2F8; --bk-sub:#A3AEC2; --bk-line:#26314A;
-    --bk-blue:#3D74FF; --bk-blue-soft:#18264A;
+    --bk-blue:#5B7BE0; --bk-blue-soft:#18264A; --bk-navy:#101B3D;
     --bk-shadow:0 2px 0 rgba(0,0,0,.3);
   }
 }
@@ -51,7 +51,7 @@ button{font:inherit}
 .bk-card{background:var(--bk-card);border-radius:18px;padding:18px;box-shadow:var(--bk-shadow);display:flex;flex-direction:column;gap:12px}
 .bk-card h2{margin:0;font-size:18px;font-weight:900;letter-spacing:-.3px}
 .bk-sub{margin:0;font-size:14px;color:var(--bk-sub);line-height:1.6}
-.bk-hero{background:var(--bk-blue);color:#fff;border-radius:22px;padding:22px 18px 18px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
+.bk-hero{background:linear-gradient(160deg,var(--bk-navy),#1F3478);color:#fff;border-radius:22px;padding:22px 18px 18px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
 .bk-hero::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;border:22px solid rgba(255,255,255,.09)}
 .bk-hero h1{margin:0;font-size:27px;line-height:1.25;font-weight:900;letter-spacing:-.8px}
 .bk-hero p{margin:0;font-size:14.5px;line-height:1.55;opacity:.92}
