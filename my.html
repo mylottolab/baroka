@@ -52,6 +52,10 @@
       </section>
       <div class="bk-ads-h bk-ads-inline"><span>광고</span></div>
       <div class="bk-ads bk-ads-inline" data-n="2"></div>
+      <label class="bk-card" style="flex-direction:row;align-items:center;gap:12px;cursor:pointer">
+        <span style="flex:1"><b>앱을 열면 바로 번호판 카메라</b><br><span class="bk-sub">끄면 찾기 화면만 열려요</span></span>
+        <input type="checkbox" id="lsOn" style="width:26px;height:26px">
+      </label>
       <p class="bk-foot"><span id="who"></span><br>번호판을 바꾸면 번호 변경 <b id="pChg">2,500원</b> · 차를 팔거나 폐차하면 무료로 지울 수 있어요.</p>
     </section>
   </main>
@@ -290,6 +294,8 @@
     });
   }
 
+  $('lsOn').checked = BK.launchScan();
+  $('lsOn').onchange = function(){ BK.launchScan(this.checked); BK.toast(this.checked ? '앱을 열면 카메라가 바로 켜져요' : '앱을 열면 찾기 화면만 열려요'); };
   BK.ads(Array.prototype.slice.call(document.querySelectorAll('.bk-ads')));
   load();
 })();

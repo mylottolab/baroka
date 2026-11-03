@@ -146,7 +146,17 @@
   if (q) { plate.value = BK.plateNice(q); find(q); }
 
   BK.ads(Array.prototype.slice.call(document.querySelectorAll('.bk-ads')));
-  BK.unread($('dot'));
+  /* 🔴 2026-11-03 — 앱 아이콘을 누르면 바로 "찾기 모드": 번호판 카메라가 켜집니다(한 번 켤 때만).
+     차주에게 온 연락이 있으면 위에 띠를 띄웁니다. */
+  BK.unread($('dot')).then(function(n){
+    if (!n) return;
+    var b = document.createElement('a'); b.href = 'inbox.html'; b.className = 'bk-msg on info';
+    b.style.cssText = 'display:block;text-decoration:none;font-weight:800';
+    b.textContent = '📨 답을 기다리는 연락이 ' + n + '건 있어요 — 보기 ›';
+    var hero = document.querySelector('.bk-hero'); hero.parentNode.insertBefore(b, hero);
+  });
+  var first = false; try { first = !sessionStorage.getItem('bk_launched'); sessionStorage.setItem('bk_launched', '1'); } catch (e) {}
+  if (first && !q && BK.standalone() && BK.launchScan()) setTimeout(function(){ $('shoot').click(); }, 350);
 })();
 </script>
 </body>

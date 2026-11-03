@@ -132,14 +132,23 @@
 
   /* 답을 기다리는 연락 수 — 위 막대 "내 차" 단추의 빨간 점 (상대가 마지막으로 보낸 열린 연락) */
   BK.unread = async function(el){
-    if (!el) return;
     try {
       var s = (await BK.sb.auth.getSession()).data.session; if (!s) return;
       var r = await fetch(URL_ + '/functions/v1/aliascall-case-list', { method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token }, body: JSON.stringify({ includeClosed: false }) });
       var d = await r.json();
       var n = (d.cases || []).filter(function(c){ return c.status !== 'closed' && c.lastMessage && c.lastMessage.sender !== 'owner'; }).length;
-      if (n) { el.textContent = n > 9 ? '9+' : n; el.classList.add('on'); }
-    } catch (e) {}
+      if (n && el) { el.textContent = n > 9 ? '9+' : n; el.classList.add('on'); }
+      return n;
+    } catch (e) { return 0; }
+  };
+  /* 🔴 2026-11-03 — 앱(또는 바탕화면에 깐 웹앱)으로 열었는가 */
+  BK.standalone = function(){
+    if (BK.isApp()) return true;
+    try { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; } catch (e) { return false; }
+  };
+  /* 앱을 열면 바로 번호판 카메라(찾기 모드) — 내 차 화면에서 끌 수 있습니다 */
+  BK.launchScan = function(on){
+    try { if (on === undefined) return localStorage.getItem('baroka_launch_scan') !== '0'; localStorage.setItem('baroka_launch_scan', on ? '1' : '0'); } catch (e) { return true; }
   };
 })();
