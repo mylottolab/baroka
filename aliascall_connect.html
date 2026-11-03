@@ -1,0 +1,2868 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>바로카 — 차주에게 연락</title>
+<!-- 2026-08-20: 발견자용 익명 긴급 알림(웹푸시)에 필요 -->
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/baroka_icon_192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="바로카">
+<meta name="theme-color" content="#1F6F6B">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="aliascall_hold.js?v=20261102"></script>
+<script src="aliascall_callguard.js?v=20261101"></script>
+<script src="aliascall_push.js"></script>
+<script src="aliascall_emoji.js"></script>
+<script src="aliascall_image_compress.js"></script>
+<script src="aliascall_zoom_lightbox.js"></script>
+<script src="aliascall_camera_capture.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#12302E; --ink-soft:#3E5654; --paper:#B8D3BE; --card:#FFFFFF;
+  --teal:#1F6F6B; --teal-deep:#123F3D; --teal-tint:#E4EFEE;
+  --coral:#E8734A; --coral-tint:#FDEAE1;
+  --line:#DCE3DE; --danger:#C1483A; --found:#2E7D4F;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{ height:100%; }
+
+/* ── PC(넓은 화면) 대응: 콘텐츠는 폰 폭 그대로 유지하되, 가운데 정렬 + 카드 느낌으로 ── */
+@media (min-width:760px){
+  body{
+    background:
+      radial-gradient(circle at 15% 20%, rgba(31,111,107,.06), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(232,115,74,.06), transparent 40%),
+      var(--paper);
+    display:flex; justify-content:center;
+  }
+  .app-shell{
+    max-width:520px; width:100%; min-height:100vh;
+    background:var(--paper); box-shadow:0 0 60px rgba(18,48,46,.08);
+    border-left:1px solid var(--line); border-right:1px solid var(--line);
+  }
+}
+
+body{
+  margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif;
+  min-height:100vh; word-break:keep-all; display:flex; flex-direction:column;
+}
+h1,h2{ font-family:'Space Grotesk',sans-serif; margin:0; }
+.mono{ font-family:'IBM Plex Mono',monospace; }
+
+header{ padding:18px 20px; text-align:center; }
+.brand-row{ display:inline-flex; align-items:center; gap:8px; }
+.brand-mark{ width:26px; height:26px; border-radius:7px; background:var(--teal); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; font-family:'Space Grotesk',sans-serif; }
+.brand-name{ font-size:15px; font-weight:600; }
+.brand-name em{ font-style:normal; color:var(--coral); }
+
+/* 2026-08-20: 하단 4개 통신수단 메뉴를 화면 하단에 항상 고정 표시 — 통화/채팅 진행 중에도
+   보이게 해서, 언제든 다른 수단으로 즉시 전환할 수 있게 함(예전엔 종료 후 메뉴로 돌아가야
+   했는데, 이제는 그냥 다른 버튼 누르면 지금 하던 건 정리되고 바로 그걸로 전환됨). */
+main{ flex:1; display:flex; align-items:center; justify-content:center; padding:20px 20px 88px; }
+.bottom-nav{ position:fixed; left:0; right:0; bottom:0; z-index:120; display:flex; background:var(--card); border-top:1.5px solid var(--line); box-shadow:0 -2px 12px rgba(18,48,46,.08); padding-bottom:env(safe-area-inset-bottom,0); }
+.bottom-nav-btn{ flex:1; border:none; background:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:9px 2px 8px; font-size:10.5px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
+.bottom-nav-btn .bn-icon{ font-size:19px; line-height:1; }
+.bottom-nav-btn.active{ color:var(--teal); }
+.bottom-nav-btn.active.mode-livechat{ color:var(--coral); }
+.bottom-nav-btn:active{ opacity:.7; }
+.wrap{ max-width:420px; width:100%; }
+
+.state-loading{ text-align:center; padding:60px 20px; }
+.spinner{ width:36px; height:36px; border:3px solid var(--line); border-top-color:var(--teal); border-radius:50%; margin:0 auto 16px; animation:spin 0.8s linear infinite; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.state-loading p{ font-size:13px; color:var(--ink-soft); }
+
+.state-error{ display:none; text-align:center; padding:50px 24px; }
+.state-error .big{ font-size:44px; margin-bottom:14px; }
+.state-error h2{ font-size:18px; margin-bottom:8px; }
+.state-error p{ font-size:13px; color:var(--ink-soft); line-height:1.6; margin:0 0 20px; }
+.state-error a{ display:inline-block; background:var(--teal); color:#fff; padding:12px 22px; border-radius:10px; font-weight:700; font-size:13.5px; text-decoration:none; }
+
+.state-found{ display:none; }
+.found-card{ background:var(--card); border:1.5px solid var(--line); border-radius:20px; padding:28px 24px; text-align:center; }
+.found-emoji{ font-size:44px; margin-bottom:10px; }
+.found-title{ font-size:19px; font-weight:700; margin-bottom:4px; }
+.found-sub{ font-size:12.5px; color:var(--ink-soft); margin-bottom:18px; }
+.found-desc{ font-size:13px; color:var(--ink); background:var(--paper); border-radius:12px; padding:12px 14px; text-align:left; line-height:1.6; margin-bottom:20px; }
+.found-detail{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.found-detail-row{ display:flex; align-items:center; gap:6px; background:var(--teal-tint); border-radius:10px; padding:6px 11px; font-size:12px; }
+.found-detail-row .fd-label{ font-weight:700; color:var(--teal-deep); }
+.found-detail-row .fd-value{ color:var(--ink); }
+
+/* ── 등록된 사진/영상/음성 갤러리 — 발견자가 "이게 맞다" 확인용 ── */
+.media-gallery{ display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:16px; -webkit-overflow-scrolling:touch; }
+.media-thumb{ flex:0 0 auto; width:92px; height:92px; border-radius:12px; overflow:hidden; background:var(--paper); border:1.5px solid var(--line); position:relative; cursor:pointer; }
+.media-thumb img, .media-thumb video{ width:100%; height:100%; object-fit:cover; }
+.media-thumb.video-thumb::after{ content:'▶'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; background:rgba(0,0,0,.25); }
+.media-audio-list{ margin-bottom:16px; }
+.media-audio-item{ display:flex; align-items:center; gap:8px; background:var(--paper); border-radius:10px; padding:8px 12px; margin-bottom:6px; font-size:12px; }
+.media-audio-item audio{ flex:1; height:32px; }
+.lightbox{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.9); z-index:80; align-items:center; justify-content:center; padding:20px; }
+.lightbox.show{ display:flex; }
+.lightbox img, .lightbox video{ max-width:100%; max-height:85vh; border-radius:8px; }
+.lightbox-close{ position:absolute; top:20px; right:20px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.15); color:#fff; border:none; font-size:18px; cursor:pointer; }
+
+/* 2026-08-21 신설: 새 메시지 팝업(토스트) */
+.global-toast-overlay{ display:none; position:fixed; inset:0; z-index:198; background:rgba(0,0,0,.45); }
+.global-toast-overlay.show{ display:block; }
+.global-toast{ display:none; position:fixed; left:50%; top:58%; transform:translate(-50%,-50%); z-index:200; background:var(--card); border:1.5px solid var(--line); box-shadow:0 8px 24px rgba(18,48,46,.22); border-radius:14px; padding:16px 44px 16px 18px; width:calc(100% - 48px); max-width:360px; }
+.global-toast.show{ display:block; animation:toastPopIn .2s ease; }
+@keyframes toastPopIn{ from{ opacity:0; transform:translate(-50%,-50%) scale(.95); } to{ opacity:1; transform:translate(-50%,-50%) scale(1); } }
+.global-toast-body{ cursor:pointer; }
+.global-toast-title{ font-size:12.5px; font-weight:700; color:var(--teal-deep); margin-bottom:3px; }
+.global-toast-preview{ font-size:12px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.global-toast-close{ position:absolute; top:8px; right:10px; background:none; border:none; font-size:14px; color:var(--ink-soft); cursor:pointer; padding:4px; }
+.privacy-note{ display:flex; align-items:flex-start; gap:8px; background:var(--teal-tint); border-radius:12px; padding:12px 14px; text-align:left; font-size:12px; color:var(--teal-deep); line-height:1.55; margin-bottom:22px; }
+.privacy-note .icon{ font-size:16px; flex-shrink:0; }
+/* 2026-08-21 신설: "이 화면을 열어두시면 지속적으로 연락 가능" 안내 — 실시간 콜백 수신 기능과 연동됨 */
+.keep-open-note{ display:flex; align-items:flex-start; gap:8px; background:var(--amber-tint, #FBF1DE); border-radius:12px; padding:12px 14px; text-align:left; font-size:11.5px; color:#8a6416; line-height:1.55; margin-bottom:22px; margin-top:-10px; }
+.keep-open-note .icon{ font-size:15px; flex-shrink:0; }
+
+/* ⚠ 2026-08-20: 세로로 쌓인 큰 버튼들(.connect-btn 등)은 하단 고정 바(.bottom-nav)로 대체되어
+   제거함. 문자메세지 입력창(.text-msg-block)은 별도 스타일(아래 101번째 줄 부근)로 계속 유지됨. */
+
+.text-msg-block{ display:none; flex-direction:column; gap:10px; margin-bottom:10px; text-align:left; }
+.text-msg-block.show{ display:flex; }
+.text-msg-block textarea{ border:1.5px solid var(--line); background:var(--card); color:var(--ink); border-radius:10px; padding:12px 14px; font-size:13.5px; font-family:'Inter',sans-serif; resize:none; min-height:64px; }
+.text-msg-block button{ background:var(--coral); color:#fff; border:none; border-radius:10px; padding:12px; font-weight:700; font-size:13.5px; cursor:pointer; }
+.text-msg-sent-note{ display:none; font-size:12px; color:var(--found); font-weight:700; margin-bottom:10px; }
+.text-msg-sent-note.show{ display:block; }
+
+.guide-link-bottom{ display:block; text-align:center; margin-top:18px; font-size:12px; color:var(--ink-soft); text-decoration:underline; }
+
+/* 2026-08-19: 통화 진행 화면을 전체화면 오버레이에서 "상단 상태바 + 하단 상시 채팅" 구조로
+   재설계함 — 채팅이 마이크 권한/수락 여부와 무관하게 요청 시작 즉시 열리도록 하기 위함
+   (수신자 쪽 aliascall_incoming_calls.html과 동일한 설계) */
+.calling-overlay{ display:none; position:fixed; top:0; left:0; right:0; bottom:64px; z-index:50; background:var(--paper); flex-direction:column; }
+.calling-overlay.show{ display:flex; }
+.calling-topbar{ flex-shrink:0; max-height:42vh; overflow-y:auto; background:var(--teal-deep); color:#fff; text-align:center; padding:20px 22px; display:flex; flex-direction:column; align-items:center; }
+.calling-topbar .pulse-ring{ width:56px; height:56px; border-radius:50%; background:rgba(255,255,255,.12); display:flex; align-items:center; justify-content:center; margin-bottom:12px; animation:pulseRing 1.6s ease-in-out infinite; flex-shrink:0; }
+.calling-topbar .pulse-ring .dot{ width:30px; height:30px; border-radius:50%; background:#fff; }
+@keyframes pulseRing{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,255,255,.25); } 50%{ box-shadow:0 0 0 14px rgba(255,255,255,0); } }
+.calling-topbar h3{ font-size:15.5px; margin:0 0 3px; }
+.calling-topbar p{ font-size:11.5px; color:rgba(255,255,255,.75); margin:0 0 14px; }
+.calling-topbar .end-btn{ background:var(--coral); color:#fff; border:none; border-radius:10px; padding:10px 22px; font-weight:700; font-size:13px; cursor:pointer; }
+.leave-msg-block{ display:none; flex-direction:column; gap:9px; width:100%; max-width:340px; margin-top:4px; }
+.leave-msg-block.show{ display:flex; }
+.leave-msg-block input{ border:1.5px solid rgba(255,255,255,.3); background:rgba(255,255,255,.08); color:#fff; border-radius:10px; padding:11px 13px; font-size:13px; }
+.leave-msg-block input::placeholder{ color:rgba(255,255,255,.5); }
+.leave-msg-block button{ background:var(--coral); color:#fff; border:none; border-radius:10px; padding:11px; font-weight:700; font-size:13px; cursor:pointer; }
+
+/* 2026-08-20 (3단계) 신설: 소유자 콜백 수신시 수락/거절 버튼 */
+.ring-btn-lg{ width:52px; height:52px; border-radius:50%; border:none; font-size:20px; cursor:pointer; }
+.ring-btn-lg.accept{ background:var(--found); color:#fff; }
+.ring-btn-lg.decline{ background:var(--danger); color:#fff; }
+
+/* ⚠ 예전엔 display:none으로 숨겼는데, 음성통화 모드에서는 이 안에 있는 #remoteVideo가
+   상대방 오디오까지 재생하는 요소라서, display:none인 조상 안에 있으면 모바일 브라우저에서
+   오디오 재생이 막히거나 불안정해지는 문제가 있었음(음성연결은 되는데 소리가 안 들리는 버그의
+   원인). visibility:hidden + height:0 방식으로 바꿔서 화면엔 안 보이되 오디오는 계속 흐르게 함. */
+.call-video-area{ visibility:hidden; height:0; overflow:hidden; position:relative; width:100%; max-width:200px; aspect-ratio:3/4; background:#000; border-radius:12px; margin-bottom:0; }
+.call-video-area.show{ visibility:visible; height:auto; margin-bottom:10px; }
+.call-video-area video{ width:100%; height:100%; object-fit:cover; }
+#remoteVideo{ position:absolute; inset:0; }
+#localVideo{ position:absolute; width:60px; height:80px; right:8px; bottom:8px; border-radius:8px; border:2px solid rgba(255,255,255,.6); object-fit:cover; }
+.voice-avatar{ display:none; width:56px; height:56px; border-radius:50%; background:rgba(255,255,255,.14); align-items:center; justify-content:center; font-size:24px; margin-bottom:10px; flex-shrink:0; }
+.voice-avatar.show{ display:flex; }
+
+.call-controls{ display:none; gap:12px; margin-top:4px; }
+.call-controls.show{ display:flex; }
+.ctrl-btn{ width:44px; height:44px; border-radius:50%; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:17px; background:rgba(255,255,255,.14); color:#fff; }
+.ctrl-btn.active-off{ background:var(--coral); }
+.ctrl-btn.hangup{ background:var(--danger); }
+.unmute-btn{ display:none; margin-top:12px; background:rgba(255,255,255,.15); color:#fff; border:1.5px solid rgba(255,255,255,.4); border-radius:18px; padding:8px 14px; font-size:11.5px; font-weight:700; cursor:pointer; }
+.unmute-btn.show{ display:inline-block; }
+
+/* 2026-08-19 (2차 수정): 통화 중엔 채팅이 자동으로 안 뜨고, 작은 토글 버튼으로만 열리도록
+   되돌림 — 음성/영상통화 시도 중에 채팅창까지 같이 뜨면 오히려 혼선을 준다는 판단 반영.
+   반면 "문자 채팅하기"는 아예 별도의 순수 채팅 전용 화면으로 분리함 (통화 UI 자체가 없음). */
+.session-chat{ display:none; flex:1; flex-direction:column; min-height:0; background:var(--paper); }
+.session-chat.show{ display:flex; }
+.chat-only-header{ display:none; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--line); background:var(--card); flex-shrink:0; }
+.chat-only-header b{ font-size:14px; }
+.chat-only-header button{ background:var(--danger); color:#fff; border:none; border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:700; cursor:pointer; }
+.finder-push-toggle{ background:var(--line) !important; color:var(--ink-soft) !important; width:32px; height:32px; border-radius:50% !important; padding:0 !important; font-size:15px !important; display:flex; align-items:center; justify-content:center; }
+.finder-push-toggle.on{ background:var(--teal) !important; color:#fff !important; }
+.chat-mini-toggle{ display:none; position:fixed; right:18px; bottom:78px; width:50px; height:50px; border-radius:50%; background:var(--teal); color:#fff; border:none; font-size:19px; cursor:pointer; z-index:65; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(18,48,46,.25); }
+.chat-messages{ flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
+.chat-bubble{ max-width:75%; padding:9px 13px; border-radius:14px; font-size:13px; line-height:1.5; }
+.chat-bubble.me{ align-self:flex-end; background:var(--teal); color:#fff; border-bottom-right-radius:4px; }
+.chat-bubble.them{ align-self:flex-start; background:var(--card); border:1px solid var(--line); border-bottom-left-radius:4px; }
+.chat-bubble.photo{ padding:4px; background:none !important; border:none !important; }
+.chat-photo{ max-width:170px; max-height:220px; border-radius:12px; display:block; cursor:pointer; object-fit:cover; }
+
+/* 2026-08-23 신설: 연속 사진 묶음(타일) — 카톡 방식 */
+.chat-bubble.photo-group{ padding:4px !important; }
+.chat-bubble.deleted{ opacity:.6; font-style:italic; font-size:12.5px; }
+.photo-group-grid{ display:grid; gap:3px; width:170px; }
+.photo-group-grid.count-1{ grid-template-columns:1fr; }
+.photo-group-grid.count-1 .photo-group-thumb{ width:170px; max-height:220px; aspect-ratio:auto; border-radius:10px; }
+.photo-group-grid.count-2{ grid-template-columns:1fr 1fr; }
+.photo-group-grid.count-3plus{ grid-template-columns:1fr 1fr 1fr; }
+.photo-group-thumb{ width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px; cursor:pointer; display:block; }
+.photo-group-more-overlay{ position:relative; }
+.photo-group-more-overlay::after{ content:attr(data-more); position:absolute; inset:0; background:rgba(0,0,0,.5); color:#fff; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; border-radius:6px; }
+.chat-input-row{ display:flex; gap:8px; padding:12px 14px; border-top:1px solid var(--line); background:var(--card); flex-shrink:0; align-items:center; }
+.chat-input-row input{ flex:1; border:1.5px solid var(--line); border-radius:20px; padding:11px 16px; font-size:13.5px; }
+.chat-input-row button{ background:var(--teal); color:#fff; border:none; border-radius:50%; width:42px; height:42px; font-size:16px; cursor:pointer; flex-shrink:0; }
+#emojiBtn{ background:var(--teal-tint); }
+
+/* 2026-08-22 신설: 이모지 선택 패널 — 애니메이션 GIF 이미지 그리드 */
+.emoji-panel{ display:none; flex-direction:column; padding:8px 8px 4px; background:var(--card); border-top:1px solid var(--line); max-height:270px; flex-shrink:0; }
+.emoji-panel.show{ display:flex; }
+.aliascall-emoji-tabs{ display:flex; gap:2px; overflow-x:auto; padding-bottom:6px; margin-bottom:6px; border-bottom:1px solid var(--line); flex-shrink:0; }
+.aliascall-emoji-tab{ background:none; border:none; font-size:17px; padding:5px 9px; border-radius:8px; cursor:pointer; opacity:.45; flex-shrink:0; }
+.aliascall-emoji-tab.active{ opacity:1; background:var(--teal-tint); }
+.aliascall-emoji-grid{ display:grid; grid-template-columns:repeat(8,1fr); gap:2px; overflow-y:auto; max-height:190px; }
+.aliascall-emoji-btn{ background:none; border:none; padding:5px; cursor:pointer; border-radius:8px; line-height:1; font-size:20px; }
+.aliascall-emoji-btn img{ width:26px; height:26px; display:block; margin:0 auto; }
+.aliascall-emoji-btn:active{ background:var(--teal-tint); }
+.aliascall-emoji-credit{ text-align:center; font-size:9px; color:var(--ink-soft); padding:6px 0 2px; flex-shrink:0; }
+.emoji-sticker-bubble{ padding:4px !important; display:flex; gap:2px; }
+.emoji-sticker{ width:52px; height:52px; }
+.chat-attach-btn{ background:var(--teal-tint) !important; color:var(--teal-deep) !important; font-size:18px !important; }
+
+/* 2026-08-23 신설: "+" 팝업(사진첨부/사진촬영) */
+#plusMenuBtn{ background:var(--teal-tint); color:var(--teal-deep); font-size:18px; }
+.plus-menu-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; align-items:flex-end; }
+.plus-menu-overlay.show{ display:flex; }
+.plus-menu-sheet{ background:var(--card); width:100%; border-radius:16px 16px 0 0; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:20px 14px calc(20px + env(safe-area-inset-bottom,0)); }
+.plus-menu-item{ background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:8px; padding:10px 4px; cursor:pointer; border-radius:10px; }
+.plus-menu-item span:first-child{ width:46px; height:46px; border-radius:50%; background:var(--teal-tint); display:flex; align-items:center; justify-content:center; font-size:20px; }
+.plus-menu-item span:last-child{ font-size:10.5px; color:var(--ink-soft); }
+
+/* 2026-08-23 신설: 채팅 사용법 안내 패널 */
+.panel-overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:220; align-items:flex-end; }
+.panel-overlay.show{ display:flex; }
+.panel-sheet{ background:var(--card); width:100%; max-height:75vh; border-radius:16px 16px 0 0; display:flex; flex-direction:column; }
+.panel-header{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px; font-weight:700; font-size:14px; border-bottom:1px solid var(--line); }
+.panel-close{ background:none; border:none; font-size:16px; color:var(--ink-soft); cursor:pointer; }
+.panel-list{ overflow-y:auto; padding:10px 14px; flex:1; }
+.guide-list{ padding:6px 14px 16px; }
+.guide-item{ display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
+.guide-item:last-child{ border-bottom:none; }
+.guide-icon{ font-size:20px; width:32px; text-align:center; flex-shrink:0; }
+.guide-title{ font-size:12.5px; font-weight:700; margin-bottom:3px; }
+.guide-desc{ font-size:11.5px; color:var(--ink-soft); line-height:1.5; }
+.chat-closed-note{ display:none; text-align:center; padding:10px 14px; font-size:11.5px; color:var(--ink-soft); background:var(--paper); border-top:1px solid var(--line); }
+.chat-closed-note.show{ display:block; }
+.chat-system-note{ align-self:center; font-size:11px; color:var(--ink-soft); background:var(--line); padding:5px 12px; border-radius:12px; margin:4px 0; }
+
+/* 2026-08-23 신설: 날짜 구분선 + 메시지 시간 표시 */
+.date-divider{ align-self:center; text-align:center; font-size:11px; color:var(--ink-soft); background:rgba(0,0,0,.06); border-radius:12px; padding:5px 14px; margin:14px auto; width:fit-content; }
+.msg-time-row{ font-size:9.5px; color:var(--ink-soft); margin:-4px 4px 8px; }
+.msg-time-row.me{ align-self:flex-end; }
+.msg-time-row.them{ align-self:flex-start; }
+/* 2026-08-21 신설: "마지막으로 받은 메시지" 반짝임 표시 */
+@keyframes chatNewGlow{ 0%,100%{ box-shadow:0 0 0 0 rgba(232,115,74,0); } 50%{ box-shadow:0 0 12px 4px rgba(232,115,74,.55); } }
+.chat-bubble.new-highlight{ background:#FFF4D6 !important; color:var(--ink) !important; animation:chatNewGlow 1s ease-in-out infinite; }
+
+.back-btn{ background:none; border:none; font-size:18px; color:var(--ink); cursor:pointer; padding:2px 4px 2px 0; line-height:1; }
+.brand-home-link{ display:flex; align-items:center; gap:9px; text-decoration:none; color:inherit; }
+</style>
+<script src="aliascall_burum_link.js"></script>
+<script src="aliascall_msg_delete.js"></script>
+<script src="aliascall_rec.js?v=20261009e"></script>
+<!-- 🔴 2026-10-07 화면 설정(주간/야간·색깔·글자) -->
+<script src="aliascall_theme.js?v=20261103b"></script>
+</head>
+<body>
+
+<div class="app-shell">
+
+<header>
+  <div class="brand-row">
+    <button class="back-btn" onclick="history.length > 1 ? history.back() : location.href='index.html'" aria-label="뒤로가기" data-i18n-aria="backBtn">←</button>
+    <a href="index.html" class="brand-home-link">
+      <div class="brand-mark" style="width:auto;padding:0 6px;background:#fff;color:#0B1220;border:2px solid #0B1220;border-radius:6px;font-weight:900;font-size:12px;box-shadow:inset 5px 0 0 #1450F5;padding-left:9px">바로</div>
+      <div class="brand-name" style="font-weight:900">바로<em style="color:#1450F5">카</em></div>
+    </a>
+    <div class="lang-toggle" style="margin-left:auto;">
+      <button data-lang="ko" class="active">KR</button>
+      <button data-lang="en">EN</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <div class="state-loading" id="stateLoading">
+      <div class="spinner"></div>
+      <p data-i18n="checking">확인하는 중…</p>
+    </div>
+
+    <div class="state-error" id="stateError">
+      <div class="big">🔍</div>
+      <h2 data-i18n="notFoundTitle">등록 정보를 찾을 수 없어요</h2>
+      <p data-i18n="notFoundDesc">QR이 손상되었거나, 이미 처리된(삭제된) 등록일 수 있어요.<br><span data-i18n="searchYourself">직접 검색해보시겠어요?</span></p>
+      <a href="index.html" data-i18n="searchDirectly">번호·이름으로 검색하기</a>
+    </div>
+
+    <div class="state-error" id="stateExpired" style="display:none;">
+      <div class="big">⏳</div>
+      <h2 data-i18n="expiredTitle">연결이 잠시 중단되어 있어요</h2>
+      <p data-i18n="expiredDesc">소유자의 수신서비스 기간이 만료되었습니다.<br><span data-i18n="expiredHint">소유자에게 갱신을 안내해주시면 다시 연결할 수 있어요.</span></p>
+      <a href="index.html" data-i18n="findOther">다른 등록물 찾기</a>
+    </div>
+
+    <div class="state-found" id="stateFound">
+      <div class="found-card">
+        <div class="found-emoji" id="foundEmoji">🚗</div>
+        <div class="found-title" id="foundTitle">-</div>
+        <div class="found-sub" id="foundSub">-</div>
+        <div class="found-detail" id="foundDetail" style="display:none;"></div>
+        <div class="found-desc" id="foundDesc" style="display:none;"></div>
+
+        <div class="media-gallery" id="mediaGallery" style="display:none;"></div>
+        <div class="media-audio-list" id="mediaAudioList"></div>
+
+        <!-- 🔴 2026-10-04 — 주인 폰이 울릴 때 보일 내 호칭(선택). 이 폰에만 기억됩니다. -->
+        <div class="caller-name-row" style="margin:12px 0 4px;text-align:left">
+          <label for="callerNameInput" id="callerNameLbl" style="display:block;font-size:12.5px;font-weight:700;margin-bottom:5px">어떻게 불러드릴까요? (선택)</label>
+          <input id="callerNameInput" maxlength="20" autocomplete="off" autocorrect="off" spellcheck="false"
+                 placeholder="예: 주차장 관리인"
+                 style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit">
+          <div id="callerNameHint" style="font-size:11.5px;opacity:.7;margin-top:4px">전화를 걸면 받는 분 화면에 이 이름이 보입니다. 비워 두셔도 됩니다.</div>
+        </div>
+
+        <div class="privacy-note">
+          <span class="icon">🔒</span>
+          <span data-i18n="privacyNote">실제 전화번호는 어떤 경우에도 노출되지 않습니다. 지금 브라우저에서 바로 익명으로 연결됩니다.</span>
+        </div>
+
+        <div class="keep-open-note" id="keepOpenNote">
+          <span class="icon">💡</span>
+          <span data-i18n="keepOpenNote">완전히 본 건이 해결되기 전까지는 이 화면을 닫지 말고 열어두시면, 상대와 지속적인 연락이 가능합니다.</span>
+        </div>
+
+        <div class="text-msg-sent-note" id="textMsgSentNote" data-i18n="textMsgSentNote">✓ 메시지를 보냈어요. 소유자가 확인하는 대로 답이 올 거예요.</div>
+        <div class="text-msg-block" id="textMsgBlock">
+          <textarea id="textMsgInput" rows="3" data-i18n-placeholder="textMsgPlaceholder" data-i18n-placeholder="firstMsgPlaceholder" placeholder="예: 방금 등록해두신 물건 봤어요! 어디로 전달드리면 될까요?"></textarea>
+          <button id="textMsgSendBtn" data-i18n="textMsgSend">보내기</button>
+        </div>
+
+      </div>
+      <a href="index.html" class="guide-link-bottom" data-i18n="findOther">다른 등록물 찾기</a>
+      <!-- 🔴 2026-10-29 "나도 만들기" — 앱 없이 연락하는 분(로그인 안 한 분)에게만 보입니다 -->
+      <a href="index.html?from=connect" id="mineLink" style="display:none;margin:14px auto 0;max-width:360px;padding:13px 14px;border-radius:14px;text-align:center;text-decoration:none;font-size:14px;font-weight:700;line-height:1.5;color:var(--teal-deep,#123F3D);background:var(--teal-tint,#E4EFEE);border:1px solid var(--line,#DCE3DE)">
+        🔒 <span id="mineT1">이 연락은 번호 없이 보호되고 있어요</span><br><span id="mineT2" style="color:var(--coral,#E8734A)">내 차 · 물건 · 반려동물에도 무료로 만들기 ›</span></a>
+    </div>
+
+  </div>
+</main>
+
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose">✕</button>
+  <div id="lightboxContent"></div>
+</div>
+
+<!-- 2026-08-21 신설: 새 메시지 팝업(토스트) -->
+<div class="global-toast-overlay" id="globalToastOverlay"></div>
+<div class="global-toast" id="globalToast">
+  <button class="global-toast-close" id="globalToastClose">✕</button>
+  <div class="global-toast-body" id="globalToastBody">
+    <div class="global-toast-title" id="globalToastTitle" data-i18n="toastOwnerReplied">💬 소유자가 답장했어요</div>
+    <div class="global-toast-preview" id="globalToastPreview"></div>
+  </div>
+</div>
+
+<div class="calling-overlay" id="callingOverlay">
+  <div class="calling-topbar" id="callingTopbar">
+    <!-- 2026-08-20 (3단계) 신설: 소유자가 콜백을 걸었을 때, 수락/거절부터 보여주는 상태.
+         기존 발신(거는) UI들과는 별도 블록이라 서로 안 겹침. -->
+    <div id="incomingRingState" style="display:none;">
+      <div class="pulse-ring"><div class="dot"></div></div>
+      <h3 id="incomingCallTitle" data-i18n="incomingCallTitle">전화가 왔어요</h3>
+      <p id="incomingCallSub" data-i18n="callReqVoice">음성통화 요청</p>
+      <div class="ring-btns" style="display:flex; gap:16px; margin-top:14px;">
+        <button class="ring-btn-lg decline" id="incomingDeclineBtn">✕</button>
+        <button class="ring-btn-lg accept" id="incomingAcceptBtn">✓</button>
+      </div>
+    </div>
+    <div class="pulse-ring" id="pulseRing"><div class="dot"></div></div>
+    <div class="voice-avatar" id="voiceAvatar">🎧</div>
+    <div class="call-video-area" id="callVideoArea">
+      <video id="remoteVideo" autoplay playsinline muted></video>
+      <video id="localVideo" autoplay playsinline muted></video>
+      <audio id="remoteAudio" autoplay></audio>
+    </div>
+    <h3 id="callingStatus" data-i18n="connecting">연결 중…</h3>
+    <p id="callingSub" data-i18n="notifyingOwner">소유자에게 알림을 보내고 있어요. 잠시만 기다려주세요.</p>
+    <div class="call-controls" id="callControls">
+      <button class="ctrl-btn" id="muteBtn">🎤</button>
+      <button class="ctrl-btn hangup" id="endCallBtn">📵</button>
+    </div>
+    <button class="unmute-btn" id="unmuteBtn" data-i18n="unmuteBtn">🔊 소리가 안 들리면 여기를 탭하세요</button>
+    <div class="leave-msg-block" id="leaveMsgBlock">
+      <input type="text" id="leaveMsgInput" data-i18n-placeholder="leaveMsgPlaceholder" data-i18n-placeholder="leaveMsgPlaceholder" placeholder="예: 지금 못 받으시면 010-0000-0000으로 연락주세요" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button id="leaveMsgSendBtn" data-i18n="leaveMsgSend">메시지 남기기</button>
+    </div>
+    <button class="end-btn" id="endCallBtnInitial" data-i18n="endCall">연결 종료</button>
+  </div>
+
+  <!-- 2026-08-19 (2차): 통화모드에선 기본 숨김(토글 버튼으로만 열림), "문자 채팅하기" 모드에선
+       상단 헤더(chat-only-header)와 함께 처음부터 항상 열려있음 -->
+  <div class="session-chat" id="chatPanel">
+    <div class="chat-only-header" id="chatOnlyHeader">
+      <b data-i18n="chatOnlyHeaderTitle">💬 문자 채팅</b>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <!-- 2026-08-21 신설: 발견자용 긴급 알림 토글 — 예전엔 첫 메시지 보낼 때 조용히 한 번만
+             물어봐서 "안 보인다"는 피드백이 있었음. 이제 채팅창 상단에 항상 눈에 보이게 둠. -->
+        <button type="button" id="finderPushToggleBtn" class="finder-push-toggle" data-i18n-title="titleUrgent" title="긴급 알림">🔔</button>
+        <button id="chatOnlyEndBtn" data-i18n="chatOnlyEnd">채팅 종료</button>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-closed-note" id="chatClosedNote">
+      <span data-i18n="chatClosedNote">🔒 이 소통은 종료되어 더 이상 메시지를 보낼 수 없어요.</span>
+      <button type="button" id="reopenCaseBtn" data-i18n="reopenBtn" style="margin-left:8px; background:var(--teal); color:#fff; border:none; border-radius:8px; padding:5px 12px; font-size:11.5px; font-weight:700; cursor:pointer;">다시 열기</button>
+    </div>
+    <!-- 2026-08-22 신설: 이모지 선택 패널 -->
+    <div class="emoji-panel" id="emojiPanel"></div>
+    <!-- 🔴 2026-10-01 두 앱 잇기 — 계속 연락하고 싶을 때 부름 초대장 보내기 -->
+    <button type="button" id="burumLinkBtn" style="display:block; margin:6px auto 0; background:none; border:1.5px solid var(--line); border-radius:20px; padding:7px 14px; font-size:12px; font-weight:700; color:var(--teal-deep, #123F3D); cursor:pointer; font-family:inherit;">💬 부름으로 이어가기</button>
+    <div class="chat-input-row">
+      <input type="file" id="chatPhotoInput" accept="image/*" multiple style="display:none;">
+      <button type="button" id="plusMenuBtn" data-i18n-title="titleMore" title="더보기">➕</button>
+      <button type="button" id="emojiBtn" data-i18n-title="titleEmoji" title="이모지">😊</button>
+      <input type="text" id="chatInput" data-i18n-placeholder="chatInputPlaceholder" placeholder="메시지 입력…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button id="chatSendBtn">➤</button>
+    </div>
+  </div>
+
+  <!-- 2026-08-23 신설: 입력창 버튼이 붐벼서(전송 버튼이 밀려나던 문제) 자주 안 쓰는 것들을
+       "+" 팝업으로 정리함 -->
+  <div class="plus-menu-overlay" id="plusMenuOverlay">
+    <div class="plus-menu-sheet">
+      <button type="button" class="plus-menu-item" id="chatAttachBtn"><span>📎</span><span data-i18n="plusPhotoAttach">사진 첨부</span></button>
+      <button type="button" class="plus-menu-item" id="chatFileBtn"><span>🗂</span><span id="chatFileBtnLabel">파일 · 동영상 보내기</span></button>
+      <input type="file" id="chatFileInput" multiple style="display:none;">
+      <button type="button" class="plus-menu-item" id="chatCameraBtn"><span>📷</span><span data-i18n="plusPhotoCamera">사진 촬영</span></button>
+      <button type="button" class="plus-menu-item" id="guideMenuBtn"><span>❓</span><span data-i18n="plusGuide">사용법</span></button>
+    </div>
+  </div>
+
+  <!-- 2026-08-23 신설: 채팅 사용법 안내 -->
+  <div class="panel-overlay" id="guidePanelOverlay">
+    <div class="panel-sheet">
+      <div class="panel-header"><span data-i18n="guidePanelTitle">❓ 채팅 사용법</span><button type="button" class="panel-close" data-close="guidePanelOverlay">✕</button></div>
+      <div class="panel-list guide-list">
+        <div class="guide-item"><div class="guide-icon">💬</div><div><div class="guide-title" data-i18n="gTitle1">기본 채팅</div><div class="guide-desc" data-i18n="gDesc1">문자·이모지·사진을 주고받을 수 있어요. 사진은 ➕ 안의 "사진 첨부"(갤러리) 또는 "사진 촬영"(바로 찍기)으로 보낼 수 있어요.</div></div></div>
+        <div class="guide-item"><div class="guide-icon">😊</div><div><div class="guide-title" data-i18n="gTitle2">이모지</div><div class="guide-desc" data-i18n="gDesc2">움직이는 이모지 584개를 카테고리별로 골라 보낼 수 있어요. 이모지 1~3개로만 된 메시지는 큰 스티커로 보여요.</div></div></div>
+        <div class="guide-item"><div class="guide-icon">🔍</div><div><div class="guide-title" data-i18n="gTitle3">사진 확대해서 보기</div><div class="guide-desc" data-i18n="gDesc3">보낸 사진을 누르면, 손가락 두 개(핀치줌)나 더블탭으로 확대해서 볼 수 있어요.</div></div></div>
+        <div class="guide-item"><div class="guide-icon">✓</div><div><div class="guide-title" data-i18n="gTitle4">읽음 표시</div><div class="guide-desc" data-i18n="gDesc4">내가 보낸 메시지를 상대가 읽으면 시간 옆에 "읽음"이 표시돼요.</div></div></div>
+        <div class="guide-item"><div class="guide-icon">🔒</div><div><div class="guide-title" data-i18n="gTitle5">번호 노출 없이 안전하게</div><div class="guide-desc" data-i18n="gDesc5">Aliascall은 실제 전화번호를 노출하지 않는 연결 서비스예요. 실시간 위치추적 기능은 없어요.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<button class="chat-mini-toggle" id="chatToggleMiniBtn">💬</button>
+
+<!-- 2026-08-20 신설: 4개 통신수단을 화면 하단에 항상 고정 표시 — 통화/채팅 진행 중에도 계속
+     보여서, 언제든 다른 버튼을 누르면 지금 하던 걸 정리하고 바로 그걸로 전환됨 -->
+<div class="bottom-nav" id="bottomNav" style="display:none;">
+  <button class="bottom-nav-btn mode-livechat" id="navLiveChat" data-mode="chat">
+    <span class="bn-icon">💬</span><span data-i18n="navLiveChat">채팅</span>
+  </button>
+  <button class="bottom-nav-btn mode-voice" id="navVoice" data-mode="voice">
+    <span class="bn-icon">🎧</span><span data-i18n="navVoice">음성</span>
+  </button>
+  <button class="bottom-nav-btn mode-video" id="navVideo" data-mode="video">
+    <span class="bn-icon">🎥</span><span data-i18n="navVideo">영상</span>
+  </button>
+  <button class="bottom-nav-btn mode-message" id="navTextMsg" data-mode="message">
+    <span class="bn-icon">✉️</span><span data-i18n="navTextMsg">문자</span>
+  </button>
+  <button class="bottom-nav-btn mode-photo" id="navPhoto" data-mode="photo">
+    <span class="bn-icon">📷</span><span data-i18n="navPhoto">사진</span>
+  </button>
+</div>
+
+<script>
+// ── 언어 전환 (KR/EN) ──
+const I18N = {
+  ko: {
+    searchYourself: '직접 검색해보시겠어요?',
+    expiredHint: '소유자에게 갱신을 안내해주시면 다시 연결할 수 있어요.',
+    toastOwnerReplied: '💬 소유자가 답장했어요',
+    toastOwnerRepliedLong: '👤 소유자가 답장했어요. 응답을 원하시면 여기를 클릭하세요',
+    photoPreview: '📷 사진을 보냈어요',
+    incomingCallTitle: '전화가 왔어요',
+    callReqVoice: '음성통화 요청', callReqVideo: '영상통화 요청',
+    checkingConnection: '연결 확인 중…',
+    chatOnlyHeaderTitle: '💬 문자 채팅',
+    chatClosedNote: '🔒 이 소통은 종료되어 더 이상 메시지를 보낼 수 없어요.',
+    reopenBtn: '다시 열기',
+    plusPhotoAttach: '사진 첨부', plusPhotoCamera: '사진 촬영', plusGuide: '사용법',
+    guidePanelTitle: '❓ 채팅 사용법',
+    gTitle1: '기본 채팅',
+    gDesc1: '문자·이모지·사진을 주고받을 수 있어요. 사진은 ➕ 안의 "사진 첨부"(갤러리) 또는 "사진 촬영"(바로 찍기)으로 보낼 수 있어요.',
+    gTitle2: '이모지',
+    gDesc2: '움직이는 이모지 584개를 카테고리별로 골라 보낼 수 있어요. 이모지 1~3개로만 된 메시지는 큰 스티커로 보여요.',
+    gTitle3: '사진 확대해서 보기',
+    gDesc3: '보낸 사진을 누르면, 손가락 두 개(핀치줌)나 더블탭으로 확대해서 볼 수 있어요.',
+    gTitle4: '읽음 표시',
+    gDesc4: '내가 보낸 메시지를 상대가 읽으면 시간 옆에 "읽음"이 표시돼요.',
+    gTitle5: '번호 노출 없이 안전하게',
+    gDesc5: '바로카는 실제 전화번호를 노출하지 않는 연결 서비스예요. 실시간 위치추적 기능은 없어요.',
+    backBtn: '뒤로가기', titleUrgent: '긴급 알림', titleMore: '더보기', titleEmoji: '이모지',
+    firstMsgPlaceholder: '예: 방금 등록해두신 물건 봤어요! 어디로 전달드리면 될까요?',
+    leaveMsgPlaceholder: '예: 지금 못 받으시면 010-0000-0000으로 연락주세요',
+    altRegisteredPhoto: '등록된 사진', altPhoto: '사진',
+    callVideo: '🎥 영상통화', callVoice: '🎧 음성통화',
+    callAttemptSuffix: ' 시도', callEndedSuffix: ' 종료 (연결됨)', callNoAnswerSuffix: ' 응답 없음',
+    readMark: '읽음', fallbackItem: '등록물',
+    alertTryLater: '잠시 후 다시 시도해주세요.',
+    alertReopenFail: '다시 열지 못했어요. 잠시 후 다시 시도해주세요.',
+    confirmEndChat: '이 대화를 종료하시겠어요? 종료하면 더 이상 메시지를 주고받을 수 없어요.',
+    alertPhotoTooBig: '사진 용량이 너무 커요 (최대 8MB).',
+    alertPhotoSendFail: '사진을 보내지 못했어요. 잠시 후 다시 시도해주세요.',
+    alertMsgSendFail: '메시지를 보내지 못했어요. 잠시 후 다시 시도해주세요.',
+    checking: '확인하는 중…', notFoundTitle: '등록 정보를 찾을 수 없어요',
+    notFoundDesc: 'QR이 손상되었거나, 이미 처리된(삭제된) 등록일 수 있어요.<br>직접 검색해보시겠어요?',
+    searchDirectly: '번호·이름으로 검색하기',
+    expiredTitle: '연결이 잠시 중단되어 있어요',
+    // 2026-09-28: 1회용 임시연락처
+    tmpTitle: '번호 없이 연락하세요', tmpSub: '임시연락처 · {left} · 서로의 번호는 드러나지 않습니다',
+    tmpDays: '{n}일 남음', tmpHours: '{n}시간 남음',
+    tmpEndedT: '이 연락처는 끝났습니다', tmpEndedD: '기한이 지났거나 상대가 연락을 마쳤습니다. 더는 문자나 전화를 보낼 수 없습니다.',
+    tmpTakenT: '이미 다른 분과 연결된 연락처입니다', tmpTakenD: '이 임시연락처는 처음 연락한 한 분만 쓸 수 있습니다.',
+    tmpMine: '나도 번호 없이 연락받고 싶다면 — 1회용 임시연락처 알아보기 ›',
+    expiredDesc: '소유자의 수신서비스 기간이 만료되었습니다.<br>소유자에게 갱신을 안내해주시면 다시 연결할 수 있어요.',
+    findOther: '다른 등록물 찾기',
+    privacyNote: '실제 전화번호는 어떤 경우에도 노출되지 않습니다. 지금 브라우저에서 바로 익명으로 연결됩니다.',
+    keepOpenNote: '완전히 본 건이 해결되기 전까지는 이 화면을 닫지 말고 열어두시면, 상대와 지속적인 연락이 가능합니다.',
+    connectVoice: '🎧 음성 통화하기', connectVideo: '🎥 영상 통화하기', connectLiveChat: '💬 문자 채팅하기',
+    navLiveChat: '채팅', navVoice: '음성', navVideo: '영상', navTextMsg: '문자', navPhoto: '사진',
+    connecting: '연결 중…', notifyingOwner: '소유자에게 알림을 보내고 있어요. 잠시만 기다려주세요.',
+    leaveMsgPlaceholder: '예: 지금 못 받으시면 010-0000-0000으로 연락주세요',
+    leaveMsgSend: '메시지 남기기', endCall: '연결 종료',
+    chatTitle: '채팅', chatInputPlaceholder: '메시지 입력…', chatOnlyEnd: '채팅 종료',
+    voiceConnecting: '음성으로 연결 중…', videoConnecting: '영상으로 연결 중…',
+    connected: '연결됨', callFailed: '연결 요청에 실패했어요. 잠시 후 다시 시도해주세요.',
+    mediaConnecting: '음성 경로 연결 중…',
+    micPermission: '마이크(또는 카메라) 권한이 필요합니다.',
+    noAnswerTitle: '지금은 응답이 없어요', noAnswerDesc: '아래에 메시지를 남겨두시면, 소유자가 나중에 확인할 수 있어요.',
+    leaveMsgSent: '✅ 메시지를 남겼습니다. 소유자가 확인하면 답을 드릴 수 있어요.',
+    leaveMsgFailed: '메시지 전송에 실패했어요. 다시 시도해주세요.', leaveMsgSending: '전송 중…',
+    connectTextMsg: '✉️ 문자메세지 남기기',
+    textMsgPlaceholder: '예: 방금 등록해두신 물건 봤어요! 어디로 전달드리면 될까요?',
+    textMsgSend: '보내기',
+    textMsgSentNote: '✓ 메시지를 보냈어요. 소유자가 확인하는 대로 답이 올 거예요.',
+    unmuteBtn: '🔊 소리가 안 들리면 여기를 탭하세요',
+    lateAnswerNote: '소유자가 응답했지만 시간이 초과됐어요. 다시 연결해주세요.',
+    itemTypeLabel: '물품 종류', makeLabel: '제조사·모델', colorLabel: '색상',
+    speciesLabel: '종류', petNameLabel: '이름', birthYearLabel: '출생연도',
+    reasonLabel: '사유', locationLabel: '장소',
+  },
+  en: {
+    searchYourself: 'Would you like to search yourself?',
+    expiredHint: 'Let the owner know to renew, and the connection will work again.',
+    toastOwnerReplied: '💬 The owner replied',
+    toastOwnerRepliedLong: '👤 The owner replied. Tap here to respond.',
+    photoPreview: '📷 Sent a photo',
+    incomingCallTitle: 'Incoming call',
+    callReqVoice: 'Voice call request', callReqVideo: 'Video call request',
+    checkingConnection: 'Checking connection…',
+    chatOnlyHeaderTitle: '💬 Text chat',
+    chatClosedNote: '🔒 This conversation has ended. You can no longer send messages.',
+    reopenBtn: 'Reopen',
+    plusPhotoAttach: 'Attach photo', plusPhotoCamera: 'Take photo', plusGuide: 'How to use',
+    guidePanelTitle: '❓ How to use chat',
+    gTitle1: 'Basic chat',
+    gDesc1: 'You can exchange text, emoji, and photos. Send photos from ➕ using "Attach photo" (gallery) or "Take photo" (camera).',
+    gTitle2: 'Emoji',
+    gDesc2: 'Choose from 584 animated emoji by category. Messages made of only 1–3 emoji appear as large stickers.',
+    gTitle3: 'Zoom into photos',
+    gDesc3: 'Tap a photo to zoom in with two fingers (pinch) or a double tap.',
+    gTitle4: 'Read receipts',
+    gDesc4: 'When the other person reads your message, "Read" appears next to the time.',
+    gTitle5: 'Safe, with no number exposed',
+    gDesc5: 'Baroka connects you without revealing real phone numbers. There is no real-time location tracking.',
+    backBtn: 'Back', titleUrgent: 'Urgent alerts', titleMore: 'More', titleEmoji: 'Emoji',
+    firstMsgPlaceholder: 'e.g. I just found the item you registered! Where should I bring it?',
+    leaveMsgPlaceholder: 'e.g. If you miss this, please reach me at 010-0000-0000',
+    altRegisteredPhoto: 'Registered photo', altPhoto: 'Photo',
+    callVideo: '🎥 Video call', callVoice: '🎧 Voice call',
+    callAttemptSuffix: ' attempted', callEndedSuffix: ' ended (connected)', callNoAnswerSuffix: ' — no answer',
+    readMark: 'Read', fallbackItem: 'Registered item',
+    alertTryLater: 'Please try again shortly.',
+    alertReopenFail: 'Could not reopen. Please try again shortly.',
+    confirmEndChat: 'End this conversation? Once ended, you can no longer exchange messages.',
+    alertPhotoTooBig: 'That photo is too large (8MB maximum).',
+    alertPhotoSendFail: 'Could not send the photo. Please try again shortly.',
+    alertMsgSendFail: 'Could not send the message. Please try again shortly.',
+    checking: 'Checking…', notFoundTitle: 'Registration not found',
+    notFoundDesc: "The QR may be damaged, or this registration may have been removed.<br>Would you like to search instead?",
+    searchDirectly: 'Search by number or name',
+    expiredTitle: 'Connection is temporarily unavailable',
+    tmpTitle: 'Reach them without a number', tmpSub: 'One-time card · {left} · neither number is shown',
+    tmpDays: '{n} days left', tmpHours: '{n} hours left',
+    tmpEndedT: 'This contact has ended', tmpEndedD: 'It expired or the owner cut it off. You can no longer send messages or call.',
+    tmpTakenT: 'Already connected with someone else', tmpTakenD: 'This one-time card only works for the first person who reached it.',
+    tmpMine: 'Want to be reachable without your number? See one-time contact cards ›',
+    expiredDesc: "The owner's subscription has expired.<br>Let the owner know to renew, and this will reconnect.",
+    findOther: 'Find something else',
+    privacyNote: 'Real phone numbers are never revealed. You will connect anonymously right in your browser.',
+    keepOpenNote: 'Please keep this screen open until the matter is fully resolved, so you can stay in touch.',
+    connectVoice: '🎧 Connect by voice', connectVideo: '🎥 Connect by video', connectLiveChat: '💬 Live chat',
+    navLiveChat: 'Chat', navVoice: 'Voice', navVideo: 'Video', navTextMsg: 'Text', navPhoto: 'Photo',
+    connecting: 'Connecting…', notifyingOwner: 'Notifying the owner. Please hold on a moment.',
+    leaveMsgPlaceholder: 'e.g. If you miss this, please call 010-0000-0000',
+    leaveMsgSend: 'Leave a message', endCall: 'End',
+    chatTitle: 'Chat', chatInputPlaceholder: 'Type a message…', chatOnlyEnd: 'End chat',
+    voiceConnecting: 'Connecting by voice…', videoConnecting: 'Connecting by video…',
+    connected: 'Connected', callFailed: 'Failed to send connection request. Please try again shortly.',
+    mediaConnecting: 'Connecting audio path…',
+    micPermission: 'Microphone (or camera) permission is required.',
+    noAnswerTitle: 'No answer right now', noAnswerDesc: 'Leave a message below and the owner can see it later.',
+    leaveMsgSent: '✅ Your message has been left. The owner can reply once they check it.',
+    leaveMsgFailed: 'Failed to send the message. Please try again.', leaveMsgSending: 'Sending…',
+    connectTextMsg: '✉️ Leave a text message',
+    textMsgPlaceholder: 'e.g. I saw the item you registered! Where should I bring it?',
+    textMsgSend: 'Send',
+    textMsgSentNote: '✓ Message sent. You\u2019ll hear back once the owner checks it.',
+    unmuteBtn: '🔊 Tap here if you can\u2019t hear anything',
+    lateAnswerNote: 'The owner answered, but it took too long. Please try connecting again.',
+    itemTypeLabel: 'Item type', makeLabel: 'Make · model', colorLabel: 'Color',
+    speciesLabel: 'Species', petNameLabel: 'Name', birthYearLabel: 'Birth year',
+    reasonLabel: 'Reason', locationLabel: 'Location',
+  },
+};
+// 2026-08-25 신설: 현재 언어 사전을 짧게 가져오는 헬퍼.
+// 화면이 그려진 뒤 자바스크립트가 만들어내는 문자열(통화 기록, 알림, alert 등)은
+// data-i18n으로 처리할 수 없어서 이 함수로 그때그때 언어를 반영함.
+function T(){ return I18N[currentLang] || I18N.ko; }
+
+let currentLang = localStorage.getItem('aliascall_lang') || 'ko';
+
+function applyLang(lang){
+  currentLang = lang;
+  localStorage.setItem('aliascall_lang', lang);
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const key = el.dataset.i18n;
+    if (I18N[lang][key] !== undefined) el.innerHTML = I18N[lang][key];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+    const key = el.dataset.i18nPlaceholder;
+    if (I18N[lang][key] !== undefined) el.placeholder = I18N[lang][key];
+  });
+  // 2026-08-25 신설: 아이콘 버튼의 툴팁(title)과 스크린리더용 aria-label
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    const key = el.dataset.i18nTitle;
+    if (I18N[lang][key] !== undefined) el.title = I18N[lang][key];
+  });
+  document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+    const key = el.dataset.i18nAria;
+    if (I18N[lang][key] !== undefined) el.setAttribute('aria-label', I18N[lang][key]);
+  });
+  document.querySelectorAll('.lang-toggle button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+
+  // 2026-08-25 신설: 이미 그려진 등록물 정보(카테고리 이름)를 새 언어로 다시 반영.
+  // 대화 내용은 사용자가 쓴 글이라 그대로 두고, 라벨만 바꿈.
+  if (typeof lastFoundData !== 'undefined' && lastFoundData) {
+    const subEl = document.getElementById('foundSub');
+    if (subEl) subEl.textContent = CATEGORY_LABEL_OF(lastFoundData.category) || lastFoundData.category;
+  }
+}
+document.querySelectorAll('.lang-toggle button').forEach((btn) => {
+  btn.addEventListener('click', () => applyLang(btn.dataset.lang));
+});
+
+const SUPABASE_URL = "https://qmwaraittiurkynszjts.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtd2FyYWl0dGl1cmt5bnN6anRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3ODQ5OTUsImV4cCI6MjEwMjM2MDk5NX0.9Qr2vFzDCSKS54N6C5QN44BvCzIPTMQyVz7nX3GqT9Y";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const CATEGORY_EMOJI = {
+  vehicle:'🚗', lost_item:'🎒', vulnerable_person:'🧑‍🦳', pet:'🐾', callback_contact:'📮', misc_incident:'❓', temp_contact:'🎫',
+};
+// 2026-08-25: 카테고리 이름도 언어별로. CATEGORY_LABEL()로 호출해서 씀.
+const CATEGORY_LABEL_I18N = {
+  ko: {
+    vehicle:'차량', lost_item:'분실·도난 우려 물품', vulnerable_person:'아동·치매 어르신·장애우',
+    pet:'반려동물', callback_contact:'부재중 연락', misc_incident:'기타 물품·사건', temp_contact:'1회용 임시연락처',
+  },
+  en: {
+    vehicle:'Vehicle', lost_item:'Valuables at risk of loss or theft', vulnerable_person:'Child, elderly, or person with a disability',
+    pet:'Pet', callback_contact:'Callback contact', misc_incident:'Other item or incident', temp_contact:'One-time contact card',
+  },
+};
+function CATEGORY_LABEL_OF(cat){
+  const dict = CATEGORY_LABEL_I18N[currentLang] || CATEGORY_LABEL_I18N.ko;
+  return dict[cat];
+}
+
+/* ═══ 2026-09-28: 1회용 임시연락처 ═══
+   ⚠ 임시연락처는 공개 목록에서 숨겨져 있어(registrations_hide_temp) 토큰으로 바로 못 읽습니다.
+     temp_card_public 이 토큰을 아는 사람에게만 알려줍니다.
+   ⚠ DB 가 끝났거나(temp_ended) 다른 분이 잡은(temp_taken) 연락을 거절하면,
+     그 뜻을 알아듣기 쉬운 화면으로 바꿔 보여줍니다. */
+let tempInfo = null;
+function tempLeft(){
+  if (!tempInfo || !tempInfo.expires_at) return '';
+  const ms = new Date(tempInfo.expires_at) - new Date();
+  return ms < 86400000 ? T().tmpHours.replace('{n}', Math.max(1, Math.ceil(ms / 3600000)))
+                       : T().tmpDays.replace('{n}', Math.ceil(ms / 86400000));
+}
+function showTempState(kind){
+  ['stateLoading', 'stateFound', 'stateError'].forEach((id) => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
+  const nav = document.getElementById('bottomNav'); if (nav) nav.style.display = 'none';
+  const box = document.getElementById('stateExpired');
+  box.querySelector('.big').textContent = kind === 'taken' ? '🔒' : '⏳';
+  box.querySelector('h2').textContent = kind === 'taken' ? T().tmpTakenT : T().tmpEndedT;
+  box.querySelector('p').textContent = kind === 'taken' ? T().tmpTakenD : T().tmpEndedD;
+  const a = box.querySelector('a'); a.textContent = T().tmpMine; a.href = 'index.html';
+  box.style.display = 'block';
+}
+function tempGate(msg){
+  const m = String(msg || '');
+  if (m.indexOf('temp_ended') >= 0) { showTempState('ended'); return true; }
+  if (m.indexOf('temp_taken') >= 0) { showTempState('taken'); return true; }
+  return false;
+}
+
+function getTokenFromUrl(){
+  const params = new URLSearchParams(window.location.search);
+  return params.get('t');
+}
+
+// 2026-08-20 (3단계): 등록물 정보를 화면에 채우는 부분을 공용 함수로 분리 —
+// 일반 QR 스캔 경로와, 소유자 콜백 수신 경로(registration_id로 직접 조회) 둘 다에서 재사용
+// 2026-08-25: 언어를 바꿨을 때 카테고리 이름을 다시 그리려면 원본 데이터가 필요해서 보관함
+let lastFoundData = null;
+
+function renderFoundRegistration(data){
+  lastFoundData = data;
+  const foundEl = document.getElementById('stateFound');
+  document.getElementById('foundEmoji').textContent = CATEGORY_EMOJI[data.category] || '❓';
+  document.getElementById('stateFound').dataset.category = data.category || '';   // 🔴 2026-11-01 경광등(발신)에 적어 둘 종류
+  document.getElementById('foundTitle').textContent = data.search_key || data.title || CATEGORY_LABEL_OF(data.category) || T().fallbackItem;
+  document.getElementById('foundSub').textContent = CATEGORY_LABEL_OF(data.category) || data.category;
+  /* 2026-09-28: 임시연락처 — 주인의 이름표는 보여주지 않습니다(주인만 보는 것) */
+  if (data.category === 'temp_contact') {
+    document.getElementById('foundTitle').textContent = T().tmpTitle;
+    document.getElementById('foundSub').textContent = T().tmpSub.replace('{left}', tempLeft() || CATEGORY_LABEL_OF('temp_contact'));
+  }
+  if (data.description) {
+    document.getElementById('foundDesc').textContent = data.description;
+    document.getElementById('foundDesc').style.display = 'block';
+  }
+  foundEl.style.display = 'block';
+  document.getElementById('bottomNav').style.display = 'flex';
+  foundEl.dataset.registrationId = data.id;
+
+  subscribeFinderIncomingCallWatcher(data.id); // 2026-08-21 신설
+  subscribeFinderCaseToast(data.id); // 2026-08-21 신설: 어디 화면에 있든 새 메시지 팝업으로 알려줌
+}
+
+// ── 2026-08-21 신설: 발견자가 이미 이 화면을 열어두고 대기 중일 때, 소유자가 콜백을 걸면
+// 실시간으로 바로 전화벨이 울리게 함. ⚠ 지금까지는 "긴급 알림(푸시)을 눌러서 들어오는 경우"만
+// 처리하고 있었고, "화면을 이미 보고 있는 경우"는 감지하는 코드 자체가 없었음 — 그래서 소유자가
+// 걸어도 발견자 화면에 아무 변화가 없던 버그의 원인이었음.
+let finderIncomingWatcherChannel = null;
+function subscribeFinderIncomingCallWatcher(registrationId){
+  if (finderIncomingWatcherChannel) { try { sb.removeChannel(finderIncomingWatcherChannel); } catch (e) {} }
+  finderIncomingWatcherChannel = sb.channel('finder-incoming-' + registrationId)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'webrtc_sessions' }, (payload) => {
+      const row = payload.new;
+      if (row.registration_id !== registrationId) return;
+      if (row.direction !== 'owner_to_finder') return; // 소유자가 나에게 건 콜백만 반응
+      if (finderIncomingSession && finderIncomingSession.session_token === row.session_token) return; // 이미 처리 중인 세션이면 중복 무시
+      finderIncomingSession = row;
+      showIncomingCallRing(row);
+    })
+    .subscribe();
+}
+
+// ── 2026-08-21 신설: 어디 화면에 있든 소유자 답장을 팝업(토스트)으로 알려줌 ──
+// ⚠ webrtc_sessions와 달리 case_messages엔 익명(anon) 대상 select 권한이 없어서(오늘 겪은
+// 것과 같은 이유로) postgres_changes로 직접 못 들여다봄. 대신 이미 있는 사건의 방송 채널
+// (case-{caseId})을 구독하는 방식으로 우회함 — 채팅창을 열 때 쓰는 것과 같은 방식.
+let finderToastChannel = null;
+async function subscribeFinderCaseToast(registrationId){
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-lookup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registrationId, finderAnonId }),
+    });
+    const data = await res.json();
+    if (!data.caseId) return; // 아직 연락한 적 없으면 구독할 사건 자체가 없음
+    const toastCaseId = data.caseId;
+
+    if (finderToastChannel) { try { sb.removeChannel(finderToastChannel); } catch (e) {} }
+    finderToastChannel = sb.channel('case-' + toastCaseId, { config: { broadcast: { self: false } } });
+    finderToastChannel
+      .on('broadcast', { event: 'new-message' }, ({ payload }) => {
+        if (payload.sender === 'finder' || payload.message_type === 'call_log') return;
+        if (currentCaseId === toastCaseId) return; // 이미 그 대화를 보고 있으면 토스트 불필요(채팅창 자체에서 이미 반영됨)
+        const preview = payload.message_type === 'photo' ? T().photoPreview : (payload.content || '').slice(0, 60);
+        showGlobalToast(T().toastOwnerRepliedLong, preview, () => {
+          window.location.href = 'aliascall_connect.html?case=' + toastCaseId;
+        });
+      })
+      .subscribe();
+  } catch (e) { console.warn('[toast] 사건 조회 실패(대화 자체엔 영향 없음)', e); }
+}
+
+// ── 새 메시지 팝업(토스트) ──
+function showGlobalToast(title, preview, onClick){
+  document.getElementById('globalToastTitle').textContent = title;
+  document.getElementById('globalToastPreview').textContent = preview;
+  document.getElementById('globalToastOverlay').classList.add('show');
+  document.getElementById('globalToast').classList.add('show');
+  document.getElementById('globalToastBody').onclick = () => { hideGlobalToast(); onClick(); };
+}
+function hideGlobalToast(){
+  document.getElementById('globalToastOverlay').classList.remove('show');
+  document.getElementById('globalToast').classList.remove('show');
+}
+document.getElementById('globalToastClose').addEventListener('click', hideGlobalToast);
+document.getElementById('globalToastOverlay').addEventListener('click', hideGlobalToast); // 2026-08-21: 배경(딤 처리 영역) 눌러도 닫힘
+
+async function init(){
+  const token = getTokenFromUrl();
+  const incomingCallToken = new URLSearchParams(window.location.search).get('incomingCall');
+  const caseParam = new URLSearchParams(window.location.search).get('case');
+  const loadingEl = document.getElementById('stateLoading');
+  const errorEl = document.getElementById('stateError');
+  const foundEl = document.getElementById('stateFound');
+
+  // 2026-08-20 (3단계): 소유자가 걸어온 콜백을 받는 경로 — QR을 다시 스캔한 게 아니라,
+  // 긴급 알림(웹푸시)을 탭해서 들어온 경우. session_token으로 바로 사건/등록물을 찾음.
+  if (incomingCallToken) {
+    await initIncomingCallFlow(incomingCallToken, loadingEl, errorEl);
+    return;
+  }
+
+  // 2026-08-21 신설: 소유자가 채팅에 답장했을 때 오는 긴급 알림을 탭해서 들어온 경우 —
+  // 예전엔 이 알림이 그냥 connect.html로만 연결돼서 어느 대화인지 알 방법이 없었음
+  // ("채팅 종료" 후 기본화면에 있다가 알림을 눌러도 대화로 못 돌아가던 버그의 원인).
+  // 이제 case_id가 실려오므로, 그 사건을 바로 찾아서 채팅을 자동으로 열어줌.
+  if (caseParam) {
+    await initCaseResumeFlow(caseParam, loadingEl, errorEl);
+    return;
+  }
+
+  if (!token) {
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    let { data, error } = await sb.from('registrations')
+      .select('id, category, title, search_key, description')
+      .eq('qr_code_token', token)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    /* 2026-09-28: 임시연락처는 목록에서 숨겨져 있어 위에서 안 나옵니다 */
+    if (!error && !data) {
+      const tr = await sb.rpc('temp_card_public', { p_token: token, p_code: null, p_finder: getFinderAnonId() });
+      if (tr.data) {
+        tempInfo = tr.data;
+        if (tempInfo.ended) { loadingEl.style.display = 'none'; showTempState('ended'); return; }
+        if (tempInfo.taken) { loadingEl.style.display = 'none'; showTempState('taken'); return; }
+        data = { id: tempInfo.registration_id, category: 'temp_contact', title: null, search_key: null, description: null };
+      }
+    }
+
+    loadingEl.style.display = 'none';
+
+    if (error || !data) {
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    // ⚠ 계정단위 구독 판정 — 개인정보(profiles.subscription_expires_at)를 클라이언트로
+    // 직접 내려주지 않고, 서버가 true/false만 반환하는 RPC로 확인 (아동·노인·반려동물은
+    // 이 함수 내부에서 이미 항상 true로 처리됨)
+    const { data: connectable, error: connErr } = await sb.rpc('check_registration_connectable', {
+      p_registration_id: data.id,
+    });
+    if (connErr || connectable === false) {
+      document.getElementById('stateExpired').style.display = 'block';
+      return;
+    }
+
+    renderFoundRegistration(data);
+    if (typeof acApplyConnectMode === 'function') acApplyConnectMode(data.id);   // 🔴 2026-10-18 기간이 끝난 차량은 메시지 · 채팅 · 사진만
+
+    await loadCategoryDetail(data.id, data.category);
+    await loadMedia(data.id);
+  } catch (e) {
+    console.error('[connect] 조회 오류', e);
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+  }
+}
+
+// =====================================================
+// 2026-08-20 (3단계) 신설: 소유자가 사건함에서 콜백을 걸었을 때, 발견자가 받는 흐름.
+// ⚠ 기존 "거는" 로직(pc/localStream/rtChannel/offerResendInterval 등)과 완전히 분리된
+// 별도 변수(finderPc 등)를 씀 — 오늘 하루 종일 안정화시킨 기존 발신 로직을 절대 건드리지
+// 않기 위한 안전장치. incoming_calls.html의 answerCall()과 대칭 구조.
+// =====================================================
+let finderPc = null, finderLocalStream = null, finderRtChannel = null;
+let finderIncomingSession = null;
+let finderCallEnding = false;
+
+// ── 2026-08-21 신설: 긴급 알림(답장 알림)을 탭해서 특정 사건으로 바로 돌아오는 흐름 ──
+async function initCaseResumeFlow(caseId, loadingEl, errorEl){
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caseId, finderAnonId }),
+    });
+    const caseData = await res.json();
+    if (!res.ok || !caseData.registrationId) {
+      loadingEl.style.display = 'none';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    let { data: reg, error: regErr } = await sb.from('registrations')
+      .select('id, category, title, search_key, description')
+      .eq('id', caseData.registrationId)
+      .maybeSingle();
+    /* 2026-09-28: 임시연락처는 목록에서 숨겨져 읽히지 않습니다. 연결 가능한 등록물이면 임시연락처로 봅니다 */
+    if (!reg && !regErr) {
+      const okc = await sb.rpc('check_registration_connectable', { p_registration_id: caseData.registrationId });
+      if (okc.data === true) reg = { id: caseData.registrationId, category: 'temp_contact', title: null, search_key: null, description: null };
+    }
+    loadingEl.style.display = 'none';
+    if (regErr || !reg) { errorEl.style.display = 'block'; return; }
+
+    renderFoundRegistration(reg);
+    if (typeof acApplyConnectMode === 'function') acApplyConnectMode(reg.id);   // 🔴 2026-10-18
+    await loadCategoryDetail(reg.id, reg.category);
+    await loadMedia(reg.id);
+
+    openResumedChat(caseId, caseData); // 등록물 정보 확인되면 바로 채팅을 열어서 이어서 대화 가능하게 함
+  } catch (e) {
+    console.error('[connect] 사건 재개 처리 오류', e);
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+  }
+}
+
+// 이미 조회해둔 사건 데이터(이력 포함)를 그대로 써서 채팅을 열어줌 — case-open을 또 호출해서
+// 사건을 새로 만들 필요 없이, 알림에 실려온 그 사건을 곧바로 이어감
+function openResumedChat(caseId, caseData){
+  currentMode = 'chat';
+  currentCaseId = caseId;
+  renderedMsgIds = new Set();
+  ownerLastReadAt = caseData.ownerLastReadAt || null; // 2026-08-23 신설
+
+  const overlay = document.getElementById('callingOverlay');
+  overlay.classList.add('show');
+  document.getElementById('callingTopbar').style.display = 'none';
+  document.getElementById('chatOnlyHeader').style.display = 'flex';
+  document.getElementById('chatToggleMiniBtn').style.display = 'none';
+  document.getElementById('chatPanel').classList.add('show');
+  document.getElementById('chatMessages').innerHTML = '';
+  document.getElementById('chatClosedNote').classList.remove('show');
+  document.getElementById('chatInput').disabled = false;
+  document.getElementById('chatSendBtn').disabled = false;
+
+  let lastEl1 = null, lastMsg1 = null;
+  (caseData.messages || []).forEach((m) => { const el = appendChatMessage(m, m.sender === 'finder' ? 'me' : 'them'); renderedMsgIds.add(m.id); lastEl1 = el; lastMsg1 = m; });
+  if (lastMsg1 && lastMsg1.sender !== 'finder') markNewReceivedHighlight(lastEl1);
+  if (caseData.status === 'closed') {
+    document.getElementById('chatClosedNote').classList.add('show');
+    document.getElementById('chatInput').disabled = true;
+    document.getElementById('chatSendBtn').disabled = true;
+  }
+
+  subscribeCaseRealtime(currentCaseId);
+  renderFinderPushToggle();
+  markCaseAsRead(); // 2026-08-23 신설
+
+  if (caseMessagePollInterval) clearInterval(caseMessagePollInterval);
+  caseMessagePollInterval = setInterval(() => {
+    if (currentCaseId) refreshCaseMessages(currentCaseId, true);
+  }, 8000);
+}
+
+async function initIncomingCallFlow(sessionToken, loadingEl, errorEl){
+  try {
+    const { data: session, error: sessErr } = await sb.from('webrtc_sessions')
+      .select('id, registration_id, call_type, case_id, session_token, ended_at')
+      .eq('session_token', sessionToken)
+      .maybeSingle();
+    if (sessErr || !session || session.ended_at) {
+      loadingEl.style.display = 'none';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    let { data: reg, error: regErr } = await sb.from('registrations')
+      .select('id, category, title, search_key, description')
+      .eq('id', session.registration_id)
+      .maybeSingle();
+    /* 2026-09-28: 임시연락처는 목록에서 숨겨져 읽히지 않습니다. 연결 가능한 등록물이면 임시연락처로 봅니다 */
+    if (!reg && !regErr) {
+      const okc = await sb.rpc('check_registration_connectable', { p_registration_id: session.registration_id });
+      if (okc.data === true) reg = { id: session.registration_id, category: 'temp_contact', title: null, search_key: null, description: null };
+    }
+    loadingEl.style.display = 'none';
+    if (regErr || !reg) { errorEl.style.display = 'block'; return; }
+
+    renderFoundRegistration(reg);
+    if (typeof acApplyConnectMode === 'function') acApplyConnectMode(reg.id);   // 🔴 2026-10-18
+    await loadCategoryDetail(reg.id, reg.category);
+    await loadMedia(reg.id);
+
+    finderIncomingSession = session;
+    showIncomingCallRing(session);
+  } catch (e) {
+    console.error('[connect] 콜백 수신 처리 오류', e);
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+  }
+}
+
+function showIncomingCallRing(session){
+  document.getElementById('callingOverlay').classList.add('show');
+  document.getElementById('incomingRingState').style.display = 'block';
+  document.getElementById('incomingCallSub').textContent = session.call_type === 'video' ? T().callReqVideo : T().callReqVoice;
+  // ⚠ 2026-08-21 수정: calling-topbar 안의 기본 요소들(pulseRing/callingStatus/callingSub/
+  // endCallBtnInitial/leaveMsgBlock)은 발신(거는) 흐름 전용으로 항상 보이게 되어있었는데,
+  // 수신 알림을 띄울 땐 이것들을 안 숨겨서 "전화가 왔어요"와 "연결 중…"이 겹쳐 보이던 버그.
+  document.getElementById('pulseRing').style.display = 'none';
+  document.getElementById('callingStatus').style.display = 'none';
+  document.getElementById('callingSub').style.display = 'none';
+  document.getElementById('endCallBtnInitial').style.display = 'none';
+  document.getElementById('leaveMsgBlock').classList.remove('show');
+  startFinderRingtone();
+}
+
+document.getElementById('incomingDeclineBtn').addEventListener('click', () => {
+  stopFinderRingtone();
+  if (finderIncomingSession) {
+    const declineChannel = sb.channel('webrtc-' + finderIncomingSession.session_token, { config: { broadcast: { self: false } } });
+    declineChannel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        declineChannel.send({ type: 'broadcast', event: 'declined', payload: {} });
+        setTimeout(() => sb.removeChannel(declineChannel), 600);
+      }
+    });
+  }
+  document.getElementById('callingOverlay').classList.remove('show');
+  document.getElementById('incomingRingState').style.display = 'none';
+  // 2026-08-21: 다음에 다른 흐름(발신 통화 등)이 쓸 수 있도록 기본 상태로 복원
+  document.getElementById('pulseRing').style.display = 'flex';
+  document.getElementById('callingStatus').style.display = 'block';
+  document.getElementById('callingSub').style.display = 'block';
+  document.getElementById('endCallBtnInitial').style.display = '';
+  finderIncomingSession = null;
+});
+
+document.getElementById('incomingAcceptBtn').addEventListener('click', async () => {
+  stopFinderRingtone();
+  if (!finderIncomingSession) return;
+  activeCallRole = 'incoming'; // 2026-08-20 (3단계)
+  document.getElementById('incomingRingState').style.display = 'none';
+  // 2026-08-21: 실제 통화 화면에 필요한 요소들을 다시 보여줌 (수신 알림 표시하며 숨겨뒀던 것)
+  document.getElementById('pulseRing').style.display = 'flex';
+  document.getElementById('callingStatus').style.display = 'block';
+  document.getElementById('callingSub').style.display = 'block';
+  document.getElementById('callControls').classList.add('show');
+  document.getElementById('callingStatus').textContent = T().checkingConnection;
+  document.getElementById('callingSub').textContent = '';
+  await answerIncomingCall(finderIncomingSession);
+});
+
+async function answerIncomingCall(session){
+  const mode = session.call_type;
+  acNativeC('callStarted', session.session_token, acCallTitle());   // 🔴 앱 버전 18 — 폰에도 알림
+  finderRtChannel = sb.channel('webrtc-' + session.session_token, { config: { broadcast: { self: false } } });
+  acRecBegin('in', mode, session.case_id || currentCaseId);   // 🔴 2026-10-09 미리 걸어 둠
+  let pendingIceCandidates = [];
+  let offerLock = false;   // 🔴 2026-09-30 첫 offer 를 처리 중인가
+
+  finderRtChannel
+    .on('broadcast', { event: 'offer' }, async ({ payload }) => {
+      // 상대(소유자)가 응답을 못 받아서 offer를 반복 재전송하는 중일 수 있음 — 이미 pc가
+      // 있으면(=이미 처리 중이면) 중복 offer는 무시
+      if ((finderPc && finderPc.signalingState !== 'closed') || offerLock) return;
+      /* 🔴 2026-09-30 — 문지기를 기다리기 "전에" 세웁니다. 거는 쪽은 offer 를 되풀이해 보내는데,
+         열쇠를 기다리는 몇 초 사이 두 번째 offer 가 문지기를 통과해 통화 줄이 두 개 생기고 엉켰습니다
+         (진단: 받는 쪽 연결 new · 거는 쪽 checking 에 멈춤). */
+      offerLock = true;
+      const iceCfg = await acIceReady();
+      finderPc = new RTCPeerConnection(iceCfg);
+      finderPc.onicecandidate = (e) => {
+        if (e.candidate) finderRtChannel.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } });
+      };
+      finderPc.ontrack = (e) => {
+        document.getElementById('remoteVideo').srcObject = e.streams[0];
+        const audioEl = document.getElementById('remoteAudio');
+        audioEl.srcObject = e.streams[0];
+        const playPromise = audioEl.play();
+        if (playPromise && playPromise.catch) playPromise.catch(() => document.getElementById('unmuteBtn').classList.add('show'));
+      };
+      finderPc.oniceconnectionstatechange = () => {   // 🔴 2026-10-09 connectionState 를 안 알려 주는 브라우저용
+        if (finderPc && (finderPc.iceConnectionState === 'connected' || finderPc.iceConnectionState === 'completed'))
+          acRecBegin('in', mode, session.case_id || currentCaseId);
+      };
+      finderPc.onconnectionstatechange = () => {
+        if (!finderPc) return;
+        if (finderPc.connectionState === 'connected') {
+          document.getElementById('callingStatus').textContent = I18N[currentLang].connected;
+          document.getElementById('callingSub').textContent = '';
+          if (!acConnectedC) acNativeC('callOngoing', acCallTitle(), mode === 'video');   // 🔴 앱 버전 18 — 통화 모드
+          acConnectedC = true;
+          acRecBegin('in', mode, session.case_id || currentCaseId);   // 🔴 2026-10-09 녹음 · 카메라 단추
+        }
+        if (['disconnected', 'failed', 'closed'].includes(finderPc.connectionState)) {
+          endIncomingCall(true);
+        }
+      };
+
+      try {
+        finderLocalStream = await acGetMedia(mode);
+      } catch (e) {
+        console.error('[webrtc] 마이크 · 카메라 열기 실패', e);
+        alert(acMediaErrText(e));
+        endIncomingCall(true);
+        return;
+      }
+      finderLocalStream.getTracks().forEach((t) => finderPc.addTrack(t, finderLocalStream));
+      acVideoFallback(finderPc, finderLocalStream, false);
+      if (mode === 'video') { document.getElementById('localVideo').srcObject = finderLocalStream; document.getElementById('callVideoArea').classList.add('show'); }
+      else document.getElementById('voiceAvatar').classList.add('show');
+
+      await finderPc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+      for (const candidate of pendingIceCandidates) {
+        try { await finderPc.addIceCandidate(candidate); } catch (e) { console.error('[webrtc] 지연 ICE 추가 오류', e); }
+      }
+      pendingIceCandidates = [];
+
+      const answer0 = await finderPc.createAnswer();
+      await finderPc.setLocalDescription(answer0);
+      await acGatherDone(finderPc);                 // 🔴 길 정보까지 담아서
+      const answer = finderPc.localDescription;
+      finderRtChannel.send({ type: 'broadcast', event: 'answer', payload: { sdp: answer } });
+    })
+    .on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
+      if (!finderPc || !finderPc.remoteDescription) { pendingIceCandidates.push(payload.candidate); return; }
+      try { await finderPc.addIceCandidate(payload.candidate); } catch (e) { console.error('[webrtc] ICE 추가 오류', e); }
+    })
+    .on('broadcast', { event: 'hangup' }, () => endIncomingCall(true))
+    .on('broadcast', { event: 'rec' }, ({ payload }) => { if (window.ACRec) ACRec.signal(payload); })   // 🔴 2026-10-09 녹음 협의
+    .subscribe();
+}
+
+function endIncomingCall(silent){
+  acNativeC('callEnded'); acConnectedC = false; acOnHoldC = false;   // 🔴 앱 버전 18
+  if (finderCallEnding) return;
+  finderCallEnding = true;
+  try { if (window.ACRec) ACRec.end(); } catch (e) { console.warn('[rec] 끝내기 실패', e); }   // 🔴 2026-10-09 담는 중이면 멈추고 저장 (끊기 전에)
+  if (finderRtChannel && !silent) finderRtChannel.send({ type: 'broadcast', event: 'hangup', payload: {} });
+  if (finderPc) { finderPc.close(); finderPc = null; }
+  if (finderLocalStream) { finderLocalStream.getTracks().forEach((t) => t.stop()); finderLocalStream = null; }
+  if (finderRtChannel) { sb.removeChannel(finderRtChannel); finderRtChannel = null; }
+  document.getElementById('callingOverlay').classList.remove('show');
+  document.getElementById('incomingRingState').style.display = 'none';
+  document.getElementById('callControls').classList.remove('show');
+  document.getElementById('callVideoArea').classList.remove('show');
+  document.getElementById('voiceAvatar').classList.remove('show');
+  // 2026-08-21: 다음에 다른 흐름(발신 통화 등)이 쓸 수 있도록 기본 상태로 복원
+  document.getElementById('pulseRing').style.display = 'flex';
+  document.getElementById('callingStatus').style.display = 'block';
+  document.getElementById('callingSub').style.display = 'block';
+  document.getElementById('endCallBtnInitial').style.display = '';
+  finderIncomingSession = null;
+  finderCallEnding = false;
+  activeCallRole = null; // 2026-08-20 (3단계)
+}
+
+
+// 등록자가 카테고리별로 입력한 상세정보(물품 종류, 제조사·색상, 종류 등) — 발견자가 진위를 확인할 수 있도록 표시
+// misc_incident(기타)는 별도 상세 테이블이 없어 description만으로 충분하다고 판단해 제외
+const CATEGORY_DETAIL_TABLE = {
+  vehicle: 'registration_vehicles', lost_item: 'registration_lost_items',
+  vulnerable_person: 'registration_vulnerable_persons', pet: 'registration_pets',
+  callback_contact: 'registration_callback_contacts',
+};
+
+async function loadCategoryDetail(registrationId, category){
+  const table = CATEGORY_DETAIL_TABLE[category];
+  if (!table) return;
+  try {
+    const { data, error } = await sb.from(table).select('*').eq('registration_id', registrationId).maybeSingle();
+    if (error || !data) return;
+
+    const t = I18N[currentLang];
+    const rows = [];
+    if (category === 'vehicle') {
+      if (data.make) rows.push([t.makeLabel, data.make]);
+      if (data.color) rows.push([t.colorLabel, data.color]);
+    } else if (category === 'lost_item') {
+      if (data.item_type) rows.push([t.itemTypeLabel, data.item_type]);
+    } else if (category === 'vulnerable_person') {
+      if (data.birth_year) rows.push([t.birthYearLabel, String(data.birth_year)]);
+    } else if (category === 'pet') {
+      if (data.species) rows.push([t.speciesLabel, data.species]);
+      if (data.pet_name) rows.push([t.petNameLabel, data.pet_name]);
+    } else if (category === 'callback_contact') {
+      if (data.reason) rows.push([t.reasonLabel, data.reason]);
+      if (data.location_note) rows.push([t.locationLabel, data.location_note]);
+    }
+    if (rows.length === 0) return;
+
+    const el = document.getElementById('foundDetail');
+    el.innerHTML = rows.map(([label, value]) =>
+      '<div class="found-detail-row"><span class="fd-label">' + label + '</span><span class="fd-value">' + value + '</span></div>'
+    ).join('');
+    el.style.display = 'flex';
+  } catch (e) {
+    console.error('[connect] 상세정보 조회 오류', e);
+  }
+}
+
+// 등록자가 공개(is_public=true)로 지정한 사진/영상/음성만 보여줌 (비문 등 비공개 생체정보는 별도 버킷이라 노출 안 됨)
+async function loadMedia(registrationId){
+  try {
+    const { data: files, error } = await sb.from('media_files')
+      .select('media_type, storage_path')
+      .eq('registration_id', registrationId)
+      .eq('is_public', true)
+      .order('created_at', { ascending: true })
+      .limit(10);
+
+    if (error || !files || files.length === 0) return;
+
+    const gallery = document.getElementById('mediaGallery');
+    const audioList = document.getElementById('mediaAudioList');
+
+    files.forEach((f) => {
+      const { data: pub } = sb.storage.from('aliascall-media').getPublicUrl(f.storage_path);
+      const url = pub.publicUrl;
+
+      if (f.media_type === 'photo') {
+        const thumb = document.createElement('div');
+        thumb.className = 'media-thumb';
+        thumb.innerHTML = '<img src="' + url + '" alt="' + T().altRegisteredPhoto + '" loading="lazy">';
+        thumb.addEventListener('click', () => openZoomableLightbox(url));
+        gallery.appendChild(thumb);
+      } else if (f.media_type === 'video') {
+        const thumb = document.createElement('div');
+        thumb.className = 'media-thumb video-thumb';
+        thumb.innerHTML = '<video src="' + url + '" muted></video>';
+        thumb.addEventListener('click', () => openLightbox('<video src="' + url + '" controls autoplay></video>'));
+        gallery.appendChild(thumb);
+      } else if (f.media_type === 'audio') {
+        const item = document.createElement('div');
+        item.className = 'media-audio-item';
+        item.innerHTML = '🔊 <audio src="' + url + '" controls></audio>';
+        audioList.appendChild(item);
+      }
+      // document(문서)는 발견자 화면에 굳이 안 보여줌 (등록자 확인용 성격이 강해서)
+    });
+
+    if (gallery.children.length > 0) gallery.style.display = 'flex';
+  } catch (e) {
+    console.error('[connect] 미디어 조회 오류', e);
+  }
+}
+
+function openLightbox(html){
+  document.getElementById('lightboxContent').innerHTML = html;
+  document.getElementById('lightbox').classList.add('show');
+}
+// 2026-08-22 신설: 사진은 이제 확대(핀치줌/더블탭/드래그)가 되는 전용 뷰어로 엶
+function openZoomableLightbox(url){
+  document.getElementById('lightbox').classList.add('show');
+  aliascallShowZoomableImage(document.getElementById('lightboxContent'), url);
+}
+document.getElementById('lightboxClose').addEventListener('click', () => {
+  document.getElementById('lightbox').classList.remove('show');
+  document.getElementById('lightboxContent').innerHTML = '';
+});
+
+// ═══════════════════════════════════════════════════════════════
+// WebRTC 통화 + 통화중 채팅 (발견자=caller 쪽)
+// 시그널링은 Supabase Realtime Broadcast 채널로 주고받음 (webrtc-{session_token}).
+// 채팅은 DB에 저장하지 않는 일회성 메시지 — 발견자가 로그인 계정이 없어서
+// 계속 남는 대화이력을 만들 방법 자체가 없기 때문에 이 통화 세션 동안만 유효함.
+// ═══════════════════════════════════════════════════════════════
+// ⚠ STUN만으로는 이동통신사(특히 셀룰러 데이터) 환경의 NAT를 못 뚫는 경우가 많음.
+// 아래는 STUN을 여러 개로 늘려 성공률을 약간 높인 임시 완화책일 뿐, 근본 해결책은 TURN 서버 추가임.
+// Metered.ca TURN 서버 연동 (2026-08-17, Free 500MB 플랜, Global 리전) —
+// STUN만으로 연결 안 되는 이동통신사 데이터망 등에서 이 TURN 서버가 중계를 맡아줌
+/* 🔴 2026-09-30 — 통화 중계 열쇠를 서버(aliascall-ice)에서 받습니다.
+   전에는 Metered 아이디 · 비밀번호가 여기 그대로 적혀 있어 누구든 복사해
+   우리 요금으로 통화를 중계할 수 있었습니다. 이제 화면에는 비밀이 없고,
+   통화마다 1시간짜리 열쇠를 받아 씁니다(Cloudflare TURN · 부름과 같은 방식).
+   ⚠ 받기 전에는 STUN 만 씁니다 — 대부분 통화는 그래도 붙습니다.
+   ⚠ 50분마다 새로 받아 둡니다(열쇠는 1시간짜리). */
+let RTC_CONFIG = { iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }] };
+let _iceAt = 0, _iceP = null;
+function acLoadIce(force){
+  if (!force && _iceP) return _iceP;
+  _iceP = fetch(SUPABASE_URL + '/functions/v1/aliascall-ice', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+    body: '{}',
+  }).then((r) => r.json()).then((d) => {
+    if (d && Array.isArray(d.iceServers) && d.iceServers.length) { RTC_CONFIG = { iceServers: d.iceServers }; _iceAt = Date.now(); }
+    if (d && d.turn === false) console.warn('[ice] 중계(TURN) 없이 STUN 만 받았습니다. aliascall-ice 로그를 확인하세요.');
+    return RTC_CONFIG;
+  }).catch((e) => { console.warn('[ice] 중계 열쇠를 못 받았습니다. STUN 만 씁니다.', e); _iceP = null; return RTC_CONFIG; });
+  return _iceP;
+}
+/* 통화를 열기 직전에 부릅니다. 50분이 지났으면 새로 받습니다(최대 3초 기다림). */
+async function acIceReady(){
+  if (!_iceAt || Date.now() - _iceAt > 50 * 60 * 1000) {
+    await Promise.race([acLoadIce(true), new Promise((r) => setTimeout(r, 3000))]);
+  }
+  return RTC_CONFIG;
+}
+acLoadIce();
+/* 열쇠는 1시간짜리 — 받는 쪽이 늘 새 열쇠를 갖고 있게 45분마다 미리 새로 받습니다 */
+setInterval(() => acLoadIce(true), 45 * 60 * 1000);
+/* 🔴 2026-09-30 — 길 정보(ICE 후보)를 연결 요청 · 대답 안에 모두 담아 보냅니다
+   전에는 요청(offer)은 되풀이해 보냈지만 길 정보는 한 번만 따로 보냈습니다.
+   받는 쪽이 전화를 받기 "전에" 온 길 정보는 아무도 안 듣는 채널에서 사라졌고,
+   휴대폰 망(중계가 꼭 필요한 곳)에서는 받는 쪽이 연결을 시작조차 못 했습니다
+   (진단: 받는 쪽 new · 거는 쪽 checking). 와이파이에서만 되던 이유입니다.
+   이제 길 정보 모으기가 끝날 때까지(최대 3초) 기다린 뒤, 길 정보가 모두 담긴
+   요청 · 대답(pc.localDescription)을 보내고 되풀이합니다. 따로 보내기도 그대로 둡니다. */
+function acGatherDone(pc, ms){
+  return new Promise((resolve) => {
+    if (!pc || pc.iceGatheringState === 'complete') return resolve();
+    const t = setTimeout(done, ms || 3000);
+    function done(){ clearTimeout(t); pc.removeEventListener('icegatheringstatechange', chk); resolve(); }
+    function chk(){ if (pc.iceGatheringState === 'complete') done(); }
+    pc.addEventListener('icegatheringstatechange', chk);
+  });
+}
+
+/* 🔴 2026-09-30 — 내 카메라가 없을 때
+   ① 거는 쪽이면 "영상은 받기만" 길을 만들어 상대 얼굴은 보이게 합니다
+   ② 까만 내 작은 창은 감춥니다 */
+function acVideoFallback(pc, stream, isOfferer){
+  if (!stream || !stream._noCam) return;
+  try { if (isOfferer && pc) pc.addTransceiver('video', { direction: 'recvonly' }); } catch (e) { console.warn('[media] 받기 전용 영상 길 실패', e); }
+  const lv = document.getElementById('localVideo'); if (lv) lv.style.display = 'none';
+}
+
+
+/* 🔴 2026-09-30 — 카메라 · 마이크 열기
+   전에는 무엇이 실패하든 "마이크 권한" 창만 떠서 진짜 이유를 알 수 없었습니다.
+   ① 영상이면 카메라+마이크를 먼저 시도
+   ② 카메라만 안 되면 통화를 포기하지 않고 음성으로 이어감(안내 한 줄)
+   ③ 그래도 안 되면 진짜 이유를 사람 말로 알림
+   ⚠ 카카오톡 안에서 연 화면은 카메라를 막는 경우가 많습니다. */
+function acMediaErrText(e){
+  const en = (typeof currentLang !== 'undefined' && currentLang === 'en');
+  const n = (e && e.name) || '';
+  if (n === 'NotAllowedError' || n === 'SecurityError') return en
+    ? 'Microphone or camera access is blocked. If you opened this inside KakaoTalk, open it in Chrome or Samsung Internet instead.'
+    : '마이크나 카메라 사용이 막혀 있습니다. 카카오톡 안에서 여셨다면 크롬이나 삼성 인터넷으로 열어주세요.';
+  if (n === 'NotReadableError' || n === 'AbortError') return en
+    ? 'Another app is using the microphone or camera. Close it and try again.'
+    : '다른 앱이 마이크나 카메라를 쓰고 있습니다. 그 앱을 닫고 다시 해주세요.';
+  if (n === 'NotFoundError' || n === 'OverconstrainedError') return en
+    ? 'No usable microphone or camera was found.'
+    : '쓸 수 있는 마이크나 카메라를 찾지 못했습니다.';
+  return (en ? 'Could not open the microphone or camera' : '마이크나 카메라를 열지 못했습니다') + (n ? ' (' + n + ')' : '');
+}
+async function acGetMedia(mode){
+  const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+  if (mode !== 'video') return await navigator.mediaDevices.getUserMedia({ audio, video: false });
+  try {
+    /* 🔴 2026-09-30 — 긴급 · 임시연락처 영상은 얼굴과 상황만 보이면 충분합니다.
+       480p · 15프레임으로 낮춰 중계 비용을 크게 줄입니다(체험 여부와 상관없이). */
+    return await navigator.mediaDevices.getUserMedia({ audio, video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15, max: 15 } } });
+  } catch (e) {
+    console.warn('[media] 카메라를 못 열었습니다 — 음성으로 이어갑니다', e && e.name);
+    const s = await navigator.mediaDevices.getUserMedia({ audio, video: false });   // 이것도 실패하면 바깥에서 알림
+    s._noCam = true;   // 🔴 내 카메라는 없지만 상대 영상은 받습니다(acVideoFallback)
+    const en = (typeof currentLang !== 'undefined' && currentLang === 'en');
+    /* 🔎 진단: 브라우저가 알려준 원래 오류(이름 · 글)도 함께 보여줍니다 */
+    const raw = '\n[' + ((e && e.name) || '?') + '] ' + String((e && e.message) || '').slice(0, 120);
+    setTimeout(() => alert((en ? 'The camera is not available, so this call continues as voice.\n' : '카메라를 쓸 수 없어 음성으로 연결합니다.\n') + acMediaErrText(e) + raw), 50);
+    return s;
+  }
+}
+
+const myClientId = 'caller-' + Math.random().toString(36).slice(2);
+
+let pc = null, localStream = null, rtChannel = null, currentSessionToken = null, currentMode = 'voice';
+
+/* =====================================================================
+   🔴🔴 2026-10-05 (앱 버전 18 · 거는 쪽) — 블루투스 이어폰 · 차 · 일반 전화
+   주인 화면(aliascall_incoming_calls.html)과 같은 일을 거는 쪽(발견자) 화면에서도 합니다.
+     통화 시작 → 폰에 알림(callStarted) · 연결되면 통화 모드(callOngoing) · 끝나면(callEnded)
+     이어폰 · 차 [끊기] → ALIAS_HANGUP_NOW · 쪽지(takeHangup) 1초마다 확인
+     일반 전화 "대기 후 받기" → ALIAS_HOLD
+   ⚠ 브라우저(앱이 아님)에서는 창구가 없으므로 아무 일도 안 합니다.
+   ===================================================================== */
+function acNativeC(fn, a, b){
+  /* 🔴 2026-10-09 — 폰에 "통화 중" 을 알렸는지 기억합니다(아래 청소부가 씀) */
+  if (fn === 'callStarted' || fn === 'callOngoing') _acNativeOpen = true;
+  if (fn === 'callEnded') _acNativeOpen = false;
+  /* 🔴 2026-10-27 — 통화 중 [뒤로] 막이 (aliascall_callguard.js) */
+  try { if (window.ACG) { if (fn === 'callOngoing') ACG.on(); if (fn === 'callEnded') ACG.off(); } } catch (e) {}
+  /* 🔴 2026-10-09 — 폰 창구는 "이름 + 칸 수" 가 정확히 맞아야 불립니다.
+     callEnded() 는 0칸, cancelCall(id) 는 1칸인데 예전엔 늘 2칸(a, b)을 보내 조용히 실패했습니다.
+     → 통화가 끝나도 "에일리어스콜 통화 중 ○○:○○" 알림이 남고, 다음 전화의 큰 벨이 안 울렸습니다. */
+  var args = [];
+  if (a !== undefined) args.push(a);
+  if (b !== undefined) args.push(b);
+  try {
+    if (window.AliasNative && typeof AliasNative[fn] === 'function') AliasNative[fn].apply(AliasNative, args);
+  } catch (e) { console.warn('[call] 폰 창구 실패', fn, e); }
+}
+/* 🔴 2026-10-09 — 청소부: 이 화면에 통화가 없는데 폰에는 "에일리어스콜 통화 중 ○○:○○" 이 남아 있으면 끕니다.
+   (통화를 마친 뒤 알림줄이 계속 남고, 그 때문에 다음 전화의 벨이 안 울리던 문제)
+   ⚠ 이 화면이 "통화 중" 을 알린 경우에만 끕니다 — 이어폰으로 받아 앱이 연 통화는 건드리지 않습니다. */
+let _acNativeOpen = false, _acIdleTicks = 0;
+setInterval(() => {
+  let active = true;
+  try { active = !!(pc || finderPc || rtChannel || finderRtChannel); } catch (e) { active = true; }
+  if (_acNativeOpen && !active) {
+    if (++_acIdleTicks >= 2) { console.warn('[call] 남은 통화 알림을 치웁니다'); acNativeC('callEnded'); _acIdleTicks = 0; }
+  } else _acIdleTicks = 0;
+}, 3000);
+function acCallTitle(){ try { return document.getElementById('foundTitle').textContent || ''; } catch (e) { return ''; } }
+window.ALIAS_HANGUP_NOW = function(){
+  try { if (pc) endCall(false); else if (finderPc) endIncomingCall(false); }
+  catch (e) { console.warn('[call] 바로 끊기 실패', e); }
+};
+window.ALIAS_DECLINE_NOW = function(){ /* 거는 쪽 화면에는 울리는 전화가 없습니다 */ };
+let acOnHoldC = false;
+window.ALIAS_HOLD = function(on){
+  try {
+    on = !!on;
+    if (on === acOnHoldC) return;
+    acOnHoldC = on;
+    const stream = pc ? localStream : finderLocalStream;
+    if (stream) stream.getAudioTracks().forEach((t) => (t.enabled = !on));
+    const a = document.getElementById('remoteAudio');
+    if (a) { a.muted = on; if (!on && a.play) a.play().catch(() => {}); }
+  } catch (e) { console.warn('[call] 대기 바꾸기 실패', e); }
+};
+let acConnectedC = false;
+setInterval(function(){
+  try {
+    if (!acConnectedC || !(pc || finderPc)) return;
+    if (window.AliasNative && typeof AliasNative.takeHangup === 'function' && AliasNative.takeHangup()) window.ALIAS_HANGUP_NOW();
+  } catch (e) {}
+}, 1000);
+let offerResendInterval = null;
+let wakeupPushTimer = null; // 60초 무응답시 긴급 웹푸시 발송용 (2026-08-19 신설)
+/* 🔴 2026-10-01 — 주인 폰 울리기(ring) · 벨 멈추기(cancel). 실패해도 통화에는 영향 없음 */
+let acRang = false;
+/* 🔴 2026-10-04 — 내 호칭(선택) — 이 폰에 기억해 두고, 전화 신호에 실어 보냅니다 */
+(function(){
+  try {
+    const inp = document.getElementById('callerNameInput');
+    if (!inp) return;
+    const saved = localStorage.getItem('aliascall_caller_name') || '';
+    inp.value = saved;
+    inp.addEventListener('input', function(){ try { localStorage.setItem('aliascall_caller_name', inp.value.trim().slice(0, 20)); } catch (e) {} });
+    const en = (localStorage.getItem('aliascall_lang') || navigator.language || '').toLowerCase().indexOf('en') === 0;
+    if (en) {
+      document.getElementById('callerNameLbl').textContent = 'What should we call you? (optional)';
+      inp.placeholder = 'e.g. Parking attendant';
+      document.getElementById('callerNameHint').textContent = 'When you call, the other person sees this name. You can leave it blank.';
+    }
+  } catch (e) {}
+})();
+function acCallerName(){ try { return ((document.getElementById('callerNameInput') || {}).value || '').trim().slice(0, 20); } catch (e) { return ''; } }
+function acRing(cancel, ended){
+  try {
+    /* 🔴 2026-10-01 고침 — registrationId 는 startCall() 안에서만 만들어지는 이름이라 여기서는
+       보이지 않았습니다(없는 이름 → 오류 → try 가 삼켜 조용히 아무 일도 안 함 → 벨이 안 울림).
+       화면에 적어 둔 값을 직접 읽습니다(startCall 과 같은 출처). */
+    const registrationId = (document.getElementById('stateFound') || {}).dataset
+      ? document.getElementById('stateFound').dataset.registrationId : '';
+    if (!currentSessionToken || !registrationId) { console.warn('[ring] 번호가 없어 울리지 못했습니다'); return; }
+    if (cancel && !acRang) return;          // 울린 적이 없으면 멈출 것도 없음
+    if (!cancel) acRang = true;
+    fetch(`${SUPABASE_URL}/functions/v1/aliascall-send-wakeup-push`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registrationId, mode: currentMode, sessionToken: currentSessionToken,
+        registrationTitle: document.getElementById('foundTitle').textContent, caseId: currentCaseId,
+        ring: !cancel, cancel: !!cancel, ended: !!ended, callerName: cancel ? '' : acCallerName() }),
+    }).catch((e) => console.warn('[push] 전화 신호 실패(통화 자체엔 영향 없음)', e));
+    if (cancel) acRang = false;
+  } catch (e) { console.error('[ring] 전화 신호를 보내지 못했습니다', e); }   // ⚠ 삼키지 말고 남깁니다
+}
+
+// ── 2026-08-20 신설: "사건(case)" 시스템 — 채팅/사진이 영구 저장되고, 소유자가 나중에라도
+// 답장할 수 있게 하는 대화 저장 구조. finderAnonId는 이 발견자 브라우저의 익명 식별값
+// (로그인 아님 — localStorage에 저장돼서, 같은 등록물에 다시 오면 이전 대화를 이어볼 수 있음).
+function getFinderAnonId(){
+  let id = localStorage.getItem('aliascall_finder_anon_id');
+  if (!id) {
+    id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    localStorage.setItem('aliascall_finder_anon_id', id);
+  }
+  return id;
+}
+const finderAnonId = getFinderAnonId();
+let currentCaseId = null;
+/* 🔴 2026-11-01 — 🚨 긴급 발신 경광등: 이 폰에서 연락한 건을 적어 둡니다(aliascall_beacon.js) */
+function acBeaconRemember(caseId){
+  try {
+    if (!caseId || !window.AliasBeacon) return;
+    var sf = document.getElementById('stateFound');
+    var cat = (sf && sf.dataset.category) || '';
+    if (cat === 'temp_contact') return;   // 임시연락처는 [임시] 갈래 — 경광등에 올리지 않음
+    AliasBeacon.remember(caseId, sf && sf.dataset.registrationId, (document.getElementById('foundTitle') || {}).textContent || '', cat);
+  } catch (e) {}
+}
+
+let caseRealtimeChannel = null;
+let caseMessagePollInterval = null;
+let renderedMsgIds = new Set(); // 2026-08-20: 폴링 시 중복 렌더링 방지용
+let callWasConnected = false; // 2026-08-20 (2차): 통화가 한 번이라도 실제 연결됐었는지 추적
+
+// ── chrome://webrtc-internals 안 찾아다녀도, 연결 실패시 후보쌍(candidate-pair) 정보를
+// 콘솔에 바로 찍어주는 진단 함수 — 어떤 경로(직접연결 host/srflx, 또는 TURN relay)로
+// 시도했다가 왜 실패했는지 여기서 바로 확인 가능 ──
+async function logIceCandidatePairs(pcRef){
+  try {
+    const stats = await pcRef.getStats();
+    console.log('%c[webrtc] ── candidate-pair 진단 시작 ──', 'color:#E8734A;font-weight:bold;');
+    const candidates = {};
+    stats.forEach((report) => {
+      if (report.type === 'local-candidate' || report.type === 'remote-candidate') {
+        candidates[report.id] = report;
+      }
+    });
+    let pairCount = 0;
+    stats.forEach((report) => {
+      if (report.type === 'candidate-pair') {
+        pairCount++;
+        const local = candidates[report.localCandidateId];
+        const remote = candidates[report.remoteCandidateId];
+        console.log(
+          '[webrtc] pair 상태:', report.state,
+          '| 로컬:', local ? local.candidateType + '(' + local.protocol + ')' : '?',
+          '| 원격:', remote ? remote.candidateType + '(' + remote.protocol + ')' : '?',
+          '| nominated:', report.nominated
+        );
+      }
+    });
+    if (pairCount === 0) console.warn('[webrtc] candidate-pair가 하나도 없음 — ICE 후보 자체가 상대와 전혀 매칭 안 됨');
+    console.log('%c[webrtc] ── candidate-pair 진단 끝 ──', 'color:#E8734A;font-weight:bold;');
+  } catch (e) {
+    console.error('[webrtc] getStats 진단 실패', e);
+  }
+}
+let noAnswerTimer = null;
+
+function makeSessionToken(){
+  // crypto.randomUUID 지원 브라우저 기준, 하이픈 제거해서 hex 유사 형태로
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
+  return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+}
+
+async function startCall(mode){
+  /* 🔴 2026-10-18 — 기간이 끝난 차량: 통화를 시작하지 않고(주인에게 "통화 시도" 기록도 남기지 않고) 메시지로 */
+  if (window.acConnectModeVal === 'message_only' && typeof acSetMessageOnly === 'function') {
+    alert(acModeText().callOff);
+    switchMode('message');
+    return;
+  }
+  currentMode = mode;
+  activeCallRole = 'outgoing'; // 2026-08-20 (3단계)
+  const overlay = document.getElementById('callingOverlay');
+  overlay.classList.add('show');
+  // 2026-08-19 (2차): 채팅전용 모드에서 넘어왔을 수도 있으니, 통화모드 기본 상태로 확실히 리셋
+  document.getElementById('callingTopbar').style.display = '';
+  document.getElementById('chatOnlyHeader').style.display = 'none';
+  document.getElementById('chatPanel').classList.remove('show');
+  document.getElementById('chatToggleMiniBtn').style.display = 'flex';
+  document.getElementById('callingStatus').textContent = mode === 'voice' ? I18N[currentLang].voiceConnecting : I18N[currentLang].videoConnecting;
+  document.getElementById('callingSub').textContent = I18N[currentLang].notifyingOwner;
+  document.getElementById('pulseRing').style.display = 'flex';
+  document.getElementById('leaveMsgBlock').classList.remove('show');
+
+  const registrationId = document.getElementById('stateFound').dataset.registrationId;
+
+  // 세션토큰은 클라이언트에서 직접 생성 (서버 default에 의존하면, 발견자는 비로그인이라
+  // insert 직후 .select()로 되읽어올 권한이 없어서 실패할 수 있음)
+  currentSessionToken = makeSessionToken();
+
+  // 2026-08-20 (2차): 사건함 통합 — 채팅뿐 아니라 통화 시도도 이제 같은 사건 타임라인에
+  // "☎️ 음성/영상통화 시도"로 기록됨. webrtc_sessions insert보다 먼저 사건을 확보해서
+  // case_id를 같이 실어보냄 (소유자가 "채팅 열기"든 "사건함"에서든 같은 대화로 들어오게 하기 위함).
+  try {
+    const openRes = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-open`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registrationId, finderAnonId }),
+    });
+    const openData = await openRes.json();
+    if (!openRes.ok && tempGate(openData.error)) { overlay.classList.remove('show'); return; }   // 2026-09-28
+    if (openRes.ok) {
+      currentCaseId = openData.caseId;
+      acBeaconRemember(currentCaseId);
+      renderedMsgIds = new Set();
+      ownerLastReadAt = openData.ownerLastReadAt || null; // 2026-08-23 신설
+      let lastEl2 = null, lastMsg2 = null;
+      (openData.messages || []).forEach((m) => { const el = appendChatMessage(m, m.sender === 'finder' ? 'me' : 'them'); renderedMsgIds.add(m.id); lastEl2 = el; lastMsg2 = m; });
+      if (lastMsg2 && lastMsg2.sender !== 'finder') markNewReceivedHighlight(lastEl2);
+      subscribeCaseRealtime(currentCaseId);
+      renderFinderPushToggle(); // 2026-08-21
+
+      const callLogText = (mode === 'video' ? T().callVideo : T().callVoice) + T().callAttemptSuffix;
+      fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ finderAnonId, registrationId, caseId: currentCaseId, callLog: callLogText }),
+      }).then((r) => r.json()).then((d) => {
+        if (d.messageId) { appendChatMessage({ message_type: 'call_log', content: callLogText }, 'system'); renderedMsgIds.add(d.messageId); }
+      }).catch((e) => console.warn('[case] 통화 시도 기록 실패(통화 자체엔 영향 없음)', e));
+    }
+  } catch (e) { console.warn('[case] 통화용 사건 열기 실패(통화 자체엔 영향 없음)', e); }
+
+  // 1) webrtc_sessions에 통화요청 기록 -> 소유자 화면이 이걸 실시간으로 감지해서 알림을 띄움
+  let { error } = await sb.from('webrtc_sessions').insert({
+    registration_id: registrationId,
+    call_type: mode,
+    session_token: currentSessionToken,
+    owner_notified_at: new Date().toISOString(),
+    case_id: currentCaseId,
+  });
+
+  /* 🔴 2026-09-30 — 상대(주인)가 무료 체험 영상 30분을 다 썼으면 DB 가 영상 통화를 거절합니다.
+     통화를 포기하지 않고 음성으로 이어갑니다. */
+  if (error && mode === 'video' && String(error.message || '').indexOf('trial_video_limit') >= 0) {
+    alert(currentLang === 'en' ? 'Video is not available for this contact right now, so the call continues as voice.'
+                               : '지금은 상대가 영상 통화를 받을 수 없어 음성으로 연결합니다.');
+    mode = 'voice'; currentMode = 'voice';
+    ({ error } = await sb.from('webrtc_sessions').insert({
+      registration_id: registrationId, call_type: mode, session_token: currentSessionToken,
+      owner_notified_at: new Date().toISOString(), case_id: currentCaseId,
+    }));
+  }
+
+  if (error) {
+    /* 🔴 2026-10-18 — 기간이 끝난 차량은 DB 가 통화를 거절합니다. 메시지로 이어 갑니다. */
+    if (/plan_message_only/.test(String(error.message || '')) && typeof acSetMessageOnly === 'function') {
+      overlay.classList.remove('show');
+      window.acConnectModeVal = 'message_only';
+      acSetMessageOnly(true);
+      alert(acModeText().callOff);
+      switchMode('message');
+      return;
+    }
+    if (/plan_blocked/.test(String(error.message || ''))) {   // 이 등록은 지금 연결이 쉬고 있음
+      overlay.classList.remove('show');
+      document.getElementById('stateFound').style.display = 'none';
+      var bn = document.getElementById('bottomNav'); if (bn) bn.style.display = 'none';
+      document.getElementById('stateExpired').style.display = 'block';
+      return;
+    }
+    alert(I18N[currentLang].callFailed);
+    overlay.classList.remove('show');
+    return;
+  }
+
+  // ⚠ 25초는 너무 짧았고, 40초로 늘린 뒤에도 실제로 소유자가 그보다 늦게 수락하는 일이 있었음.
+  // 예전엔 타임아웃되면 pc.close()로 연결 자체를 완전히 죽여버려서, 뒤늦게 소유자가 수락해도
+  // 조용히 실패했었음(소유자 쪽엔 "연결됨"이라고 뜨는데 발견자 쪽엔 소리도 안 들리고 반응도 없던
+  // 원인). 이제는 타임아웃되면 "메시지 남기기" 화면만 추가로 보여줄 뿐, 연결 자체(pc·localStream)는
+  // 계속 살려두고 백그라운드에서 계속 기다림. 그래서 소유자가 언제 수락하든 정상적으로 연결됨.
+  noAnswerTimer = setTimeout(() => showLeaveMessagePrompt(), 40000);
+
+  // ⚠ 2026-08-19 신설 (2026-08-20 수정: 60초→15초, 사용자 피드백 반영 — "긴급"인데 너무 길다는
+  // 의견이 많아서 단축함. 발신자 쪽 40초 "메시지 남기기" 타이머보다 확실히 먼저 오도록 해서,
+  // 발견자가 아직 기다리고 있는 동안 소유자에게 알림이 도착하게 함) 소유자가 incoming_calls.html
+  // 화면을 안 보고 있으면(탭을 닫아뒀거나 다른 화면으로 이동한 경우), 지금까지는 완전히 놓칠
+  // 수밖에 없었음. 15초까지 응답이 없으면 웹푸시로 "긴급 알림"을 보내서 앱을 안 보고 있어도
+  // 소유자 기기에 알림이 뜨도록 함 (전화번호를 안 쓰는 정책이라 SMS 대신 웹푸시 사용, aliascall_push.js 참고).
+  // 이미 답이 왔거나 통화가 끝났으면 아래 answer/declined 핸들러에서 clearTimeout으로 취소됨.
+  /* 🔴🔴 2026-10-01 (앱 버전 7) — 15초 기다리지 않고 **곧바로** 주인 폰을 울립니다.
+     앱이면 잠금화면에 일반 전화처럼 전체 화면 · 벨소리 · [받기], 브라우저면 웹푸시.
+     받거나 · 거절하거나 · 끊으면 acRing(true) 로 주인의 모든 폰에서 벨을 멈춥니다. */
+  acRing(false);
+  acNativeC('callStarted', currentSessionToken, acCallTitle());   // 🔴 앱 버전 18 — 폰에도 알림(이어폰 · 차 · 일반 전화)
+  /* ⚠ 15초 뒤 알림 한 줄(예전 방식)도 그대로 둡니다 — 아직 버전 6 이하인 앱 · 브라우저는
+     전화 신호를 띄울 자바가 없어, 이것이 있어야 전화를 놓치지 않습니다.
+     받거나 · 거절하거나 · 끊으면 아래 핸들러에서 취소됩니다. */
+  wakeupPushTimer = setTimeout(() => {
+    fetch(`${SUPABASE_URL}/functions/v1/aliascall-send-wakeup-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      /* 🔴 세션 번호도 함께 — 이 알림을 누르면 대화창이 아니라 "바로 받기" 로 열립니다 */
+      body: JSON.stringify({ registrationId, mode, registrationTitle: document.getElementById('foundTitle').textContent, caseId: currentCaseId, sessionToken: currentSessionToken }),
+    }).catch((e) => console.warn('[push] 긴급 알림 발송 요청 실패(통화 자체엔 영향 없음)', e));
+  }, 15000);
+
+  // 2026-08-19: 채팅은 통화 협상(마이크 권한/수락 여부)과 완전히 무관하게, 요청을 보낸 이 순간
+  // 바로 열림 — 소유자가 아직 수락 안 했어도, 혹은 통화 자체를 거절하더라도 문자로는 바로 소통 가능
+  // (2026-08-20 (2차): 사건 확보 자체는 위쪽으로 옮겨서 webrtc_sessions에 case_id를 같이 실어보냄)
+
+  // 2) 시그널링 채널 구독
+  rtChannel = sb.channel('webrtc-' + currentSessionToken, { config: { broadcast: { self: false } } });
+  acRecBegin('out', mode, currentCaseId);   // 🔴 2026-10-09 미리 걸어 둠 — 연결되면 🔴 · 📷 단추
+  // ⚠ 상대방이 보낸 ICE 후보(네트워크 경로 정보)가, 우리가 setRemoteDescription을 끝내기도
+  // 전에 먼저 도착할 수 있음. 이때 addIceCandidate를 바로 호출하면 에러가 나서 조용히
+  // 버려졌었는데(연결이 계속 "연결 확인 중"에 멈춰있던 유력한 원인) — 그런 후보는 일단
+  // 큐에 담아뒀다가, setRemoteDescription이 끝난 직후 한꺼번에 적용함.
+  let pendingIceCandidates = [];
+  rtChannel
+    .on('broadcast', { event: 'answer' }, async ({ payload }) => {
+      console.log('[webrtc] ⑤ answer 수신됨');
+      clearTimeout(noAnswerTimer);
+      clearTimeout(wakeupPushTimer); // 응답 왔으니 긴급 알림 예약 취소 (2026-08-19)
+      acRing(true);                  // 🔴 주인이 받음 — 다른 폰의 벨도 멈춤
+      if (offerResendInterval) { clearInterval(offerResendInterval); offerResendInterval = null; }
+      if (!pc || pc.signalingState === 'closed') { console.log('[webrtc] (pc 없음, 무시)'); return; }
+      if (pc.signalingState !== 'have-local-offer') { console.log('[webrtc] (중복 answer, 무시). signalingState:', pc.signalingState); return; }
+
+      await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+      console.log('[webrtc] ⑤-1 setRemoteDescription 완료, 대기중이던 ICE 후보', pendingIceCandidates.length, '개 적용');
+
+      // 대기 중이던 ICE 후보들을 이제 적용
+      for (const candidate of pendingIceCandidates) {
+        try { await pc.addIceCandidate(candidate); } catch (e) { console.error('[webrtc] 지연 ICE 후보 추가 오류', e); }
+      }
+      pendingIceCandidates = [];
+
+      // 뒤늦게 응답이 와서 이미 "메시지 남기기" 화면이 떠있었다면, 그 화면을 걷어내고 정상 통화 화면으로 복귀
+      document.getElementById('leaveMsgBlock').classList.remove('show');
+
+      // ⚠ 여기서는 아직 "연결됨"이라고 하지 않음 — SDP 교환만 끝났을 뿐, 실제 미디어가 흐르는지는
+      // pc.onconnectionstatechange가 'connected'를 알려줄 때까지 지켜봐야 함(위 참고)
+      document.getElementById('callingStatus').textContent = I18N[currentLang].mediaConnecting;
+      document.getElementById('callingSub').textContent = '';
+      document.getElementById('pulseRing').style.display = 'none';
+      document.getElementById('callControls').classList.add('show');
+      if (mode === 'video') document.getElementById('callVideoArea').classList.add('show');
+      else document.getElementById('voiceAvatar').classList.add('show');
+    })
+    .on('broadcast', { event: 'declined' }, () => {
+      clearTimeout(noAnswerTimer);
+      clearTimeout(wakeupPushTimer); // 소유자가 명시적으로 거절함 -> 응답한 것이므로 긴급 알림 불필요 (2026-08-19)
+      acRing(true);                  // 🔴 거절 — 벨 멈춤
+      if (offerResendInterval) { clearInterval(offerResendInterval); offerResendInterval = null; }
+      showLeaveMessagePrompt();
+    })
+    .on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
+      if (!pc || !pc.remoteDescription) { console.log('[webrtc] 상대 ICE 후보 도착(대기열에 저장):', payload.candidate.type); pendingIceCandidates.push(payload.candidate); return; }
+      console.log('[webrtc] 상대 ICE 후보 즉시 적용:', payload.candidate.type);
+      try { await pc.addIceCandidate(payload.candidate); } catch (e) { console.error('[webrtc] ICE 추가 오류', e); }
+    })
+    // ⚠ 2026-08-20: 채팅은 이제 사건(case) 시스템의 실시간 채널(case-{caseId})로 완전히 분리됨 — 여기서는 처리 안 함
+    .on('broadcast', { event: 'hangup' }, () => endCall(false))
+    .on('broadcast', { event: 'rec' }, ({ payload }) => { if (window.ACRec) ACRec.signal(payload); })   // 🔴 2026-10-09 녹음 협의
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') await createOfferAsCaller(mode);
+    });
+}
+
+// ── 응답이 없거나 거절됐을 때: 연결은 살려둔 채로 그 자리에서 메시지 남기기 옵션을 보여줌
+// (연결을 여기서 끊어버리면 소유자가 뒤늦게 수락했을 때 조용히 실패하는 문제가 있었음) ──
+function showLeaveMessagePrompt(){
+  document.getElementById('pulseRing').style.display = 'none';
+  document.getElementById('callingStatus').textContent = I18N[currentLang].noAnswerTitle;
+  document.getElementById('callingSub').textContent = I18N[currentLang].noAnswerDesc;
+  document.getElementById('leaveMsgBlock').classList.add('show');
+}
+
+document.getElementById('leaveMsgSendBtn').addEventListener('click', async () => {
+  const text = document.getElementById('leaveMsgInput').value.trim();
+  if (!text) return;
+  const btn = document.getElementById('leaveMsgSendBtn');
+  btn.disabled = true; btn.textContent = I18N[currentLang].leaveMsgSending;
+  try {
+    const { error } = await sb.from('webrtc_sessions').update({
+      left_message: text, ended_reason: 'timeout_no_answer', ended_at: new Date().toISOString(),
+    }).eq('session_token', currentSessionToken);
+    if (error) throw error;
+    document.getElementById('leaveMsgBlock').innerHTML = '<p style="color:#fff; font-size:13px;">' + I18N[currentLang].leaveMsgSent + '</p>';
+    setTimeout(() => endCall(true), 1800);
+  } catch (e) {
+    console.error('[leave-message] 저장 오류', e);
+    alert(I18N[currentLang].leaveMsgFailed);
+    btn.disabled = false; btn.textContent = I18N[currentLang].leaveMsgSend;
+  }
+});
+
+// ⚠ 일부 모바일 브라우저는 srcObject를 늦게(비동기 콜백 안에서) 할당하면 autoplay 속성만으로는
+// 오디오 재생을 막아버림(에러도 없이 조용히 무음). 그래서 명시적으로 .play()를 한번 더 시도하고,
+// 그마저 브라우저 정책으로 막히면(NotAllowedError) "탭하여 소리 켜기" 버튼을 노출시켜
+// 실제 클릭(사용자 제스처)으로 재생을 강제함.
+function tryPlayRemote(remoteEl){
+  const playPromise = remoteEl.play();
+  if (playPromise && playPromise.catch) {
+    playPromise.catch((err) => {
+      console.warn('[webrtc] 원격 오디오 자동재생 실패, 수동 재생 버튼 노출', err);
+      document.getElementById('unmuteBtn').classList.add('show');
+    });
+  }
+}
+document.getElementById('unmuteBtn').addEventListener('click', () => {
+  const audioEl = document.getElementById('remoteAudio');
+  audioEl.play().catch((err) => console.error('[webrtc] 수동 재생도 실패', err));
+  document.getElementById('unmuteBtn').classList.remove('show');
+});
+
+async function createOfferAsCaller(mode){
+  pc = new RTCPeerConnection(await acIceReady());
+  console.log('[webrtc] ① RTCPeerConnection 생성됨 (발신자)');
+  pc.onicecandidate = (e) => {
+    if (e.candidate) { console.log('[webrtc] 내 ICE 후보 전송:', e.candidate.type); rtChannel.send({ type: 'broadcast', event: 'ice-candidate', payload: { candidate: e.candidate } }); }
+    else { console.log('[webrtc] 내 ICE 후보 수집 완료(null candidate)'); }
+  };
+  pc.ontrack = (e) => {
+    console.log('[webrtc] ⑥ 상대방 트랙 수신됨:', e.track.kind);
+    // ⚠ 일부 브라우저(삼성 인터넷 등)는 <video> 태그로 오디오 전용 스트림을 재생할 때
+    // 오디오 트랙을 놓치는 경우가 있어서, 별도의 <audio> 태그에도 동일 스트림을 연결해
+    // 오디오 재생을 이중으로 보장함 (video는 muted 처리해서 소리는 audio 태그에서만 남).
+    document.getElementById('remoteVideo').srcObject = e.streams[0];
+    const audioEl = document.getElementById('remoteAudio');
+    audioEl.srcObject = e.streams[0];
+    tryPlayRemote(audioEl);
+  };
+  // ⚠ 예전엔 연결이 끊겨도(네트워크 문제, 상대방이 탭을 그냥 닫음 등) 서로에게 전혀 알리는
+  // 코드가 없어서, 한쪽은 계속 "연결됨"으로 남아있는 상태가 됐었음. 연결 상태 자체를
+  // 감시해서, 끊기면(disconnected/failed/closed) 자동으로 통화 종료 처리함.
+  pc.onconnectionstatechange = () => {
+    if (!pc) return;
+    console.log('[webrtc] connectionState:', pc.connectionState);
+    if (pc.connectionState === 'connected') {
+      // ⚠ 예전엔 SDP만 주고받으면(answer 수신 즉시) "연결됨"이라고 표시했는데, 그건 신호 교환이
+      // 끝났다는 뜻일 뿐 실제 미디어(음성)가 흐르기 시작했다는 보장은 아니었음. ICE 협상이
+      // 중간에 막혀서 영원히 "연결 중"에 머물러도 화면엔 이미 "연결됨"이 떠서, 소리가 전혀
+      // 안 나는데도 정상 연결된 것처럼 보이던 원인. 이제는 실제 connectionState가 'connected'가
+      // 됐을 때만 "연결됨"으로 바꿈 — 여기까지 안 오면 진짜 네트워크 문제라는 뜻.
+      document.getElementById('callingStatus').textContent = I18N[currentLang].connected;
+      document.getElementById('callingSub').textContent = '';
+      if (!callWasConnected) acNativeC('callOngoing', acCallTitle(), currentMode === 'video');   // 🔴 앱 버전 18 — 통화 모드
+      acConnectedC = true;
+      callWasConnected = true; // 2026-08-20 (2차): 종료 시점에 "부재중"인지 "연결 후 종료"인지 구분하기 위함
+      acRecBegin('out', currentMode, currentCaseId);   // 🔴 2026-10-09 녹음 · 카메라 단추
+    }
+    if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
+      console.warn('[webrtc] 연결 상태 이상 감지:', pc.connectionState);
+      if (pc.connectionState === 'failed') logIceCandidatePairs(pc);
+      endCall(true);
+    }
+  };
+  // 일부 브라우저(구형 Safari 등)는 connectionState 대신 iceConnectionState만 갱신하는
+  // 경우가 있어서 보조로 같이 감시함 (진단용 로그 목적도 겸함)
+  pc.oniceconnectionstatechange = () => {
+    if (!pc) return;
+    console.log('[webrtc] iceConnectionState:', pc.iceConnectionState);
+    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') acRecBegin('out', currentMode, currentCaseId);   // 🔴 2026-10-09 connectionState 를 안 알려 주는 브라우저(삼성 인터넷 등)도 🔴 · 📷 단추
+    if ((pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') && document.getElementById('callingStatus').textContent !== I18N[currentLang].connected) {
+      document.getElementById('callingStatus').textContent = I18N[currentLang].connected;
+      document.getElementById('callingSub').textContent = '';
+    }
+  };
+  pc.onicegatheringstatechange = () => {
+    console.log('[webrtc] iceGatheringState:', pc?.iceGatheringState);
+  };
+  console.log('[webrtc] ② 이벤트 핸들러 등록 완료, getUserMedia 요청 시작');
+
+  try {
+    localStream = await acGetMedia(mode);   // 에코 제거 · 잡음 억제 · 음량 자동조절 포함
+  } catch (e) {
+    console.error('[webrtc] ③ 마이크 · 카메라 열기 실패:', e);
+    alert(acMediaErrText(e));
+    endCall(true);
+    return;
+  }
+  console.log('[webrtc] ③ getUserMedia 성공, 트랙 개수:', localStream.getTracks().length);
+  localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+  if (mode === 'video') document.getElementById('localVideo').srcObject = localStream;
+  if (mode === 'video') acVideoFallback(pc, localStream, true);
+
+  const offer0 = await pc.createOffer();
+  await pc.setLocalDescription(offer0);
+  await acGatherDone(pc);                          // 🔴 길 정보까지 담아서 되풀이
+  const offer = pc.localDescription;
+  console.log('[webrtc] ④ offer 생성 및 설정 완료, 발신 시작');
+  sendOfferNow();
+
+  // ⚠ 소유자가 전화벨 팝업을 보고 수락하기까지 시간이 걸리는데(수 초~수십 초), offer를
+  // 딱 한 번만 보내면 그 사이에 도착한 offer는 유실됨 (소유자가 수락한 시점엔 이미 방송이
+  // 끝나버린 뒤라 채널에 아무도 없었던 것). 응답(answer)이 올 때까지 2.5초 간격으로 계속
+  // 재전송해서, 소유자가 언제 수락하든 다음 재전송 때 반드시 받도록 함.
+  offerResendInterval = setInterval(sendOfferNow, 2500);
+
+  function sendOfferNow(){
+    rtChannel.send({ type: 'broadcast', event: 'offer', payload: { sdp: offer, registrationTitle: document.getElementById('foundTitle').textContent } });
+  }
+}
+
+let callEnding = false; // pc.close() 자체가 connectionstatechange('closed')를 다시 유발해서 재귀호출되는 것 방지
+
+function endCall(silent){
+  acNativeC('callEnded'); acConnectedC = false; acOnHoldC = false;   // 🔴 앱 버전 18
+  if (callEnding) return;
+  callEnding = true;
+  try { if (window.ACRec) ACRec.end(); } catch (e) { console.warn('[rec] 끝내기 실패', e); }   // 🔴 2026-10-09 담는 중이면 멈추고 저장 (끊기 전에)
+  if (offerResendInterval) { clearInterval(offerResendInterval); offerResendInterval = null; }
+  if (wakeupPushTimer) { clearTimeout(wakeupPushTimer); wakeupPushTimer = null; } // 2026-08-19
+  acRing(true, !callWasConnected);   // 🔴 발견자가 끊음 — 주인 폰의 벨을 즉시 멈춤 · 🔴 2026-10-09 받기 전이면 서버가 '끝남' 으로 적음(받는 쪽 화면 표시도 내려가게)
+
+  // ⚠ 통화가 어떻게 끝났는지(정상 종료/응답없음/연결끊김) DB에 남겨서, 소유자의 "부재중" 목록에
+  // 최소한의 기록이라도 남도록 함. 실패해도 화면 정리는 계속 진행(연결 종료가 더 중요하므로).
+  if (currentSessionToken) {
+    sb.from('webrtc_sessions').update({
+      // 🔴 2026-10-09 — DB 가 받는 낱말로 (answered_and_ended · timeout_no_answer · declined · finder_left). 예전 낱말은 거절돼 끝남이 안 적혔습니다
+      ended_reason: callWasConnected ? 'answered_and_ended' : 'finder_left',
+      ended_at: new Date().toISOString(),
+    }).eq('session_token', currentSessionToken).then(({ error }) => {
+      if (error) console.error('[webrtc] 종료기록 저장 실패', error);
+    });
+  }
+
+  if (rtChannel && !silent) rtChannel.send({ type: 'broadcast', event: 'hangup', payload: {} });
+  if (pc) { pc.close(); pc = null; }
+  if (localStream) { localStream.getTracks().forEach((t) => t.stop()); localStream = null; }
+  if (rtChannel) { sb.removeChannel(rtChannel); rtChannel = null; }
+
+  // 2026-08-20 (2차): 통화(음성/영상)가 어떻게 끝났는지도 사건 타임라인에 남김 —
+  // "부재중"과 "연결 후 종료"를 구분해서 기록. 채팅/문자 모드로 끝나는 경우는 해당 없음.
+  if (currentCaseId && (currentMode === 'voice' || currentMode === 'video')) {
+    const modeLabel = currentMode === 'video' ? T().callVideo : T().callVoice;
+    const outcomeLabel = callWasConnected ? (modeLabel + T().callEndedSuffix) : (modeLabel + T().callNoAnswerSuffix);
+    const cid = currentCaseId, reg = document.getElementById('stateFound').dataset.registrationId;
+    fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ finderAnonId, registrationId: reg, caseId: cid, callLog: outcomeLabel }),
+    }).catch((e) => console.warn('[case] 통화 종료 기록 실패', e));
+  }
+  callWasConnected = false;
+
+  unsubscribeCaseRealtime(); // 2026-08-20: 통화/채팅 종료와 함께 사건 실시간 채널도 정리
+  if (caseMessagePollInterval) { clearInterval(caseMessagePollInterval); caseMessagePollInterval = null; }
+  currentCaseId = null;
+  document.getElementById('callingOverlay').classList.remove('show');
+  document.getElementById('callControls').classList.remove('show');
+  document.getElementById('callVideoArea').classList.remove('show');
+  document.getElementById('voiceAvatar').classList.remove('show');
+  document.getElementById('chatPanel').classList.remove('show');
+  document.getElementById('chatToggleMiniBtn').style.display = 'none';
+  document.getElementById('chatOnlyHeader').style.display = 'none';
+  document.getElementById('chatClosedNote').classList.remove('show');
+  document.getElementById('chatInput').disabled = false;
+  document.getElementById('chatSendBtn').disabled = false;
+  updateBottomNavActive(null); // 2026-08-20: 통화/채팅이 어떤 이유로든 끝나면 하단 바 활성 표시도 초기화
+  document.getElementById('chatMessages').innerHTML = '';
+
+  callEnding = false;
+  activeCallRole = null; // 2026-08-20 (3단계)
+}
+
+let isMuted = false;
+let activeCallRole = null; // 2026-08-20 (3단계): 'outgoing'(내가 건 통화) | 'incoming'(소유자가 걸어온 콜백) | null
+document.getElementById('muteBtn').addEventListener('click', () => {
+  const stream = activeCallRole === 'incoming' ? finderLocalStream : localStream;
+  if (!stream) return;
+  isMuted = !isMuted;
+  stream.getAudioTracks().forEach((t) => (t.enabled = !isMuted));
+  const btn = document.getElementById('muteBtn');
+  btn.textContent = isMuted ? '🔇' : '🎤';
+  btn.classList.toggle('active-off', isMuted);
+});
+
+// ── 2026-08-20 (3단계) 신설: 소유자 콜백 수신용 전화벨음 — incoming_calls.html과 동일 패턴 ──
+let finderRingtoneInterval = null;
+function finderRingOnce(){
+  if (!aliascallIsSoundEnabled()) return;
+  try {
+    const ctx = getAudioCtx();
+    const ring = (freq, startTime, duration) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.28, startTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration + 0.05);
+    };
+    const now = ctx.currentTime;
+    ring(740, now, 0.35); ring(740, now + 0.40, 0.35);
+    ring(740, now + 1.00, 0.35); ring(740, now + 1.40, 0.35);
+  } catch (e) { console.warn('[notify] 벨소리 재생 실패', e); }
+}
+function startFinderRingtone(){
+  stopFinderRingtone();
+  finderRingOnce();
+  finderRingtoneInterval = setInterval(finderRingOnce, 2200);
+}
+function stopFinderRingtone(){
+  if (finderRingtoneInterval) { clearInterval(finderRingtoneInterval); finderRingtoneInterval = null; }
+}
+
+// ── 채팅 (일회성, DB 미저장) — 2026-08-19: 통화 협상과 완전히 분리된 별도 채널로 재설계 ──
+// 2026-08-20: 이 화면만의 별도 AudioContext 대신, aliascall_push.js가 관리하는 공유
+// 컨텍스트를 그대로 씀 — "알림음 켜기" 토글로 허가받은 컨텍스트와 실제 재생 컨텍스트가
+// 서로 다른 객체라 소리가 하나도 안 나던 버그의 원인이었음(통합 위젯 도입 시 발견됨).
+function getAudioCtx(){
+  return getAliascallAudioCtx();
+}
+// 채팅 메시지 도착 알림음 — 통화벨과 헷갈리지 않도록 짧은 "핑" 한 번으로 구분 (수신자 쪽과 동일)
+function playChatPing(){
+  if (!aliascallIsSoundEnabled()) return;
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 1046;
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.22, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.22);
+  } catch (e) { console.warn('[notify] 채팅 알림음 재생 실패', e); }
+}
+
+// ── 2026-08-20 신설: 사건 실시간 채널 구독 (양쪽이 화면을 열어두고 있으면 새로고침 없이 바로 반영) ──
+function subscribeCaseRealtime(caseId){
+  if (caseRealtimeChannel) { try { sb.removeChannel(caseRealtimeChannel); } catch (e) {} }
+  caseRealtimeChannel = sb.channel('case-' + caseId, { config: { broadcast: { self: false } } });
+  caseRealtimeChannel
+    .on('broadcast', { event: 'new-message' }, ({ payload }) => {
+      // ⚠ 2026-08-20 수정: self:false는 "이 브라우저가 이 채널로 직접 보낸 것"만 걸러줌.
+      // 실제 방송은 서버(Edge Function)가 대신 보내는 거라 이 필터가 전혀 안 먹혀서,
+      // 내가 보낸 메시지가 서버를 거쳐 나에게 다시 돌아오면 무조건 "상대방"으로 잘못
+      // 표시되고 중복으로 찍히던 버그가 있었음. 이미 렌더링된 메시지(renderedMsgIds)면
+      // 건너뛰고, sender 값을 보고 정확히 나/상대를 구분하도록 수정.
+      if (renderedMsgIds.has(payload.id)) return;
+      renderedMsgIds.add(payload.id);
+      const who = payload.sender === 'finder' ? 'me' : 'them';
+      const el = appendChatMessage(payload, who);
+      if (who === 'them') { playChatPing(); markNewReceivedHighlight(el); markCaseAsRead(); } // 2026-08-23 수정: 실시간으로 받자마자 읽음 처리
+    })
+    .on('broadcast', { event: 'read-receipt' }, ({ payload }) => { // 2026-08-23 신설
+      if (payload.role === 'owner') { ownerLastReadAt = payload.readAt; refreshReadTags(); }
+    })
+    .subscribe();
+}
+function unsubscribeCaseRealtime(){
+  if (caseRealtimeChannel) { try { sb.removeChannel(caseRealtimeChannel); } catch (e) {} caseRealtimeChannel = null; }
+}
+
+// ── 2026-08-20 신설: 발견자용 익명 긴급 알림(웹푸시) — 소유자가 답장하면 화면을 안 보고 있어도
+// 알림이 오도록 함. 별도 설정화면 없이, 첫 메시지 전송이라는 자연스러운 흐름 안에서 자동으로
+// 브라우저 허용 팝업을 띄움(사용자가 "허용"만 누르면 끝 — 계정/전화번호 필요 없음). ──
+async function attemptFinderPushSubscribe(caseId){
+  try {
+    if (!pushIsSupported() || (_isIOS() && !_isStandalone())) return; // 미지원 환경이거나 iOS 홈화면 미추가면 조용히 건너뜀
+    if (Notification.permission === 'denied') return; // 이미 거부했으면 재요청 안 함(브라우저가 어차피 막음)
+    const reg = await registerAliascallServiceWorker();
+    if (!reg) return;
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) return; // 이미 구독중이면 스킵
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: _urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+    const subJson = sub.toJSON();
+    await fetch(`${SUPABASE_URL}/functions/v1/aliascall-finder-push-subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // 2026-08-25: lang 동봉 — 발견자는 계정이 없어서, 이 값이 알림 언어를 정하는 유일한 근거(v49)
+      body: JSON.stringify({ caseId, finderAnonId, endpoint: subJson.endpoint, p256dh: subJson.keys.p256dh, auth_key: subJson.keys.auth, lang: (typeof pushLang === 'function' ? pushLang() : 'ko') }),
+    });
+  } catch (e) { console.warn('[push] 발견자 익명 알림 구독 시도 실패(대화 자체엔 영향 없음)', e); }
+}
+
+// ── 2026-08-21 신설: 채팅창 상단에 항상 보이는 긴급 알림 토글 ──
+// (예전엔 첫 메시지 보낼 때 조용히 한 번만 물어봐서 "안 보인다"는 피드백이 있었음)
+async function renderFinderPushToggle(){
+  const btn = document.getElementById('finderPushToggleBtn');
+  if (!btn) return;
+  if (!pushIsSupported() || (_isIOS() && !_isStandalone())) { btn.style.display = 'none'; return; }
+  btn.style.display = 'flex';
+  const reg = await registerAliascallServiceWorker();
+  if (!reg) return;
+  const sub = await reg.pushManager.getSubscription();
+  const isOn = !!(sub && Notification.permission === 'granted');
+  btn.classList.toggle('on', isOn);
+}
+document.getElementById('finderPushToggleBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('finderPushToggleBtn');
+  if (btn.classList.contains('on')) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        const endpoint = sub.endpoint;
+        await sub.unsubscribe();
+        await fetch(`${SUPABASE_URL}/functions/v1/aliascall-finder-push-subscribe`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint }),
+        });
+      }
+    } catch (e) { console.warn('[push] 발견자 알림 끄기 실패', e); }
+  } else {
+    if (!currentCaseId) { alert(T().alertTryLater); return; }
+    await attemptFinderPushSubscribe(currentCaseId);
+  }
+  renderFinderPushToggle();
+});
+
+// ── 2026-08-19 (2차) 신설, 2026-08-20 대폭 수정(사건 시스템 연동) ──
+// "문자 채팅하기" 전용 플로우 — 통화 시도 자체가 전혀 없음. 이제 대화 내용이 영구 저장되고,
+// 소유자가 나중에라도 답장할 수 있음(기존엔 그 순간 방송만 하고 사라졌음).
+async function startLiveChatOnly(){
+  const registrationId = document.getElementById('stateFound').dataset.registrationId; // ⚠ 2026-08-20: 예전엔 이 선언이 빠져있어서 채팅 시작이 에러로 깨져있었음(수정함)
+  currentMode = 'chat';
+  currentSessionToken = makeSessionToken();
+  const overlay = document.getElementById('callingOverlay');
+  overlay.classList.add('show');
+  document.getElementById('callingTopbar').style.display = 'none';
+  document.getElementById('chatOnlyHeader').style.display = 'flex';
+  document.getElementById('chatToggleMiniBtn').style.display = 'none';
+  document.getElementById('chatPanel').classList.add('show');
+  document.getElementById('chatMessages').innerHTML = '';
+  document.getElementById('chatClosedNote').classList.remove('show');
+  document.getElementById('chatInput').disabled = false;
+  document.getElementById('chatSendBtn').disabled = false;
+
+  // 1) 사건 확보 (기존 열린 사건이 있으면 재사용 + 대화 이력 불러옴, 없으면 새로 생성)
+  let openData;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-open`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registrationId, finderAnonId }),
+    });
+    openData = await res.json();
+    if (!res.ok) throw new Error(openData.error || '사건 생성 실패');
+  } catch (e) {
+    console.error('[case] 사건 열기 실패', e);
+    if (tempGate(e.message)) { endCall(true); return; }   // 2026-09-28
+    alert(I18N[currentLang].callFailed);
+    endCall(true);
+    return;
+  }
+  currentCaseId = openData.caseId;
+  acBeaconRemember(currentCaseId);
+  renderedMsgIds = new Set();
+  ownerLastReadAt = openData.ownerLastReadAt || null; // 2026-08-23 신설
+  let lastEl3 = null, lastMsg3 = null;
+  (openData.messages || []).forEach((m) => { const el = appendChatMessage(m, m.sender === 'finder' ? 'me' : 'them'); renderedMsgIds.add(m.id); lastEl3 = el; lastMsg3 = m; });
+  if (lastMsg3 && lastMsg3.sender !== 'finder') markNewReceivedHighlight(lastEl3);
+
+  // 2) 소유자 알림용 webrtc_sessions 행 생성(기존 전화벨/배너 알림 구조 그대로 재사용) + case_id 연결
+  const { error } = await sb.from('webrtc_sessions').insert({
+    registration_id: registrationId,
+    call_type: 'chat',
+    session_token: currentSessionToken,
+    owner_notified_at: new Date().toISOString(),
+    case_id: currentCaseId,
+  });
+  if (error) console.warn('[webrtc] 채팅 알림용 세션 기록 실패(대화 자체엔 영향 없음)', error);
+
+  subscribeCaseRealtime(currentCaseId);
+  renderFinderPushToggle(); // 2026-08-21
+  markCaseAsRead(); // 2026-08-23 신설
+
+  // ⚠ 2026-08-20 신설: 실시간 방송을 놓쳤을 경우의 안전장치 — 채팅창이 열려있는 동안
+  // 8초마다 조용히 다시 확인해서, 놓친 메시지가 있으면 자동으로 채워넣음 (새로고침 불필요)
+  if (caseMessagePollInterval) clearInterval(caseMessagePollInterval);
+  caseMessagePollInterval = setInterval(() => {
+    if (currentCaseId) refreshCaseMessages(currentCaseId, true);
+  }, 8000);
+
+  // 통화와 마찬가지로, 소유자가 15초간 응답 없으면 긴급 웹푸시 발송 (2026-08-20: 60초→15초 단축)
+  wakeupPushTimer = setTimeout(() => {
+    fetch(`${SUPABASE_URL}/functions/v1/aliascall-send-wakeup-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registrationId, mode: 'chat', registrationTitle: document.getElementById('foundTitle').textContent, caseId: currentCaseId }),
+    }).catch((e) => console.warn('[push] 긴급 알림 발송 요청 실패(채팅 자체엔 영향 없음)', e));
+  }, 15000);
+}
+
+async function refreshCaseMessages(caseId, silent){
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caseId, finderAnonId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '대화 불러오기 실패');
+    ownerLastReadAt = data.ownerLastReadAt || ownerLastReadAt; // 2026-08-23 신설
+    refreshReadTags();
+    let gotNewFromOwner = false;
+    (data.messages || []).forEach((m) => {
+      if (renderedMsgIds.has(m.id)) return;
+      renderedMsgIds.add(m.id);
+      const el = appendChatMessage(m, m.sender === 'finder' ? 'me' : 'them');
+      if (silent && m.sender !== 'finder') { playChatPing(); markNewReceivedHighlight(el); gotNewFromOwner = true; }
+    });
+    if (window.ACMsgDel) ACMsgDel.syncFromList(data.messages || []); // 🔴 2026-10-08 상대가 지운 것
+    if (gotNewFromOwner) markCaseAsRead(); // 2026-08-23 신설: 채팅화면을 보고 있는 중이니 바로 읽음 처리
+    if (data.status === 'closed') {
+      document.getElementById('chatClosedNote').classList.add('show');
+      document.getElementById('chatInput').disabled = true;
+      document.getElementById('chatSendBtn').disabled = true;
+    }
+  } catch (e) {
+    if (!silent) console.error('[case] 대화 불러오기 실패', e);
+  }
+}
+document.getElementById('reopenCaseBtn').addEventListener('click', async () => {
+  if (!currentCaseId) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-reopen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caseId: currentCaseId, finderAnonId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '재개 실패');
+    document.getElementById('chatClosedNote').classList.remove('show');
+    document.getElementById('chatInput').disabled = false;
+    document.getElementById('chatSendBtn').disabled = false;
+  } catch (e) {
+    console.error('[case] 사건 재개 실패', e);
+    alert(T().alertReopenFail);
+  }
+});
+document.getElementById('chatOnlyEndBtn').addEventListener('click', async () => {
+  // 2026-08-20: "채팅 종료" 버튼은 이제 사건 자체를 종료함(양쪽 다 다시 메시지 못 보냄)
+  if (currentCaseId && confirm(T().confirmEndChat)) {
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caseId: currentCaseId, finderAnonId }),
+      });
+    } catch (e) { console.warn('[case] 사건 종료 요청 실패', e); }
+  }
+  endCall(false);
+});
+document.getElementById('chatToggleMiniBtn').addEventListener('click', () => {
+  document.getElementById('chatPanel').classList.toggle('show');
+});
+
+// 2026-08-23 신설: "+" 팝업 열고 닫기
+document.getElementById('plusMenuBtn').addEventListener('click', () => document.getElementById('plusMenuOverlay').classList.add('show'));
+document.getElementById('plusMenuOverlay').addEventListener('click', (e) => { if (e.target.id === 'plusMenuOverlay') document.getElementById('plusMenuOverlay').classList.remove('show'); });
+function closePlusMenu(){ document.getElementById('plusMenuOverlay').classList.remove('show'); }
+
+// 2026-08-23 신설: 사용법 안내 패널
+document.getElementById('guideMenuBtn').addEventListener('click', () => {
+  closePlusMenu();
+  document.getElementById('guidePanelOverlay').classList.add('show');
+});
+document.querySelectorAll('.panel-close').forEach((btn) => {
+  btn.addEventListener('click', () => document.getElementById(btn.dataset.close).classList.remove('show'));
+});
+document.querySelectorAll('.panel-overlay').forEach((overlay) => {
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('show'); });
+});
+
+// ── 사진 첨부 ──
+document.getElementById('chatAttachBtn').addEventListener('click', () => { closePlusMenu(); document.getElementById('chatPhotoInput').click(); });
+
+// ── 2026-08-22 신설: 이모지 선택 패널 ──
+const emojiPanel = document.getElementById('emojiPanel');
+renderAliascallEmojiPanel(emojiPanel, (char) => {
+  const input = document.getElementById('chatInput');
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? input.value.length;
+  input.value = input.value.slice(0, start) + char + input.value.slice(end);
+  const newPos = start + char.length;
+  input.focus();
+  input.setSelectionRange(newPos, newPos);
+});
+document.getElementById('emojiBtn').addEventListener('click', () => {
+  emojiPanel.classList.toggle('show');
+});
+
+/* 🔴 2026-10-08 — 사진 말고도 무엇이든 보내기 (동영상 · 음성 · PDF · 문서 · 압축 …) */
+try { if ((localStorage.getItem('aliascall_lang') || '').indexOf('en') === 0) document.getElementById('chatFileBtnLabel').textContent = 'Send file · video'; } catch (e) {}
+document.getElementById('chatFileBtn').addEventListener('click', () => { closePlusMenu(); document.getElementById('chatFileInput').click(); });
+document.getElementById('chatFileInput').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  if (!files.length || !currentCaseId || !window.ACFiles) return;
+  await ACFiles.send(files, {
+    sb, url: SUPABASE_URL, caseId: currentCaseId,
+    finderAnonId,
+    sendPhoto: (f) => sendChatPhoto(f),
+    post: async (content) => {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-message`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ finderAnonId, registrationId: document.getElementById('stateFound').dataset.registrationId, caseId: currentCaseId, photoUrl: content }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+      return d;
+    },
+    append: (msg) => {
+      if (msg.id && renderedMsgIds.has(msg.id)) return;
+      appendChatMessage(msg, 'me');
+      if (msg.id) renderedMsgIds.add(msg.id);
+    },
+  });
+});
+
+document.getElementById('chatPhotoInput').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  if (files.length === 0) return;
+  // 2026-08-23 신설: 여러 장 골랐으면 순서대로 하나씩 전송(자동으로 타일 묶음이 됨)
+  for (const file of files) { await sendChatPhoto(file); }
+});
+
+// 2026-08-22 수정: 노트북 웹캠에서도 실제로 카메라가 열리도록, 브라우저 내장 카메라 촬영
+// 모듈을 씀 (<input capture>는 데스크톱에서 대부분 무시되고 파일탐색기가 뜨는 문제가 있었음)
+document.getElementById('chatCameraBtn').addEventListener('click', () => {
+  closePlusMenu();
+  aliascallOpenCameraCapture((file) => sendChatPhoto(file));
+});
+
+async function sendChatPhoto(file){
+  if (!currentCaseId) return;
+  file = await aliascallCompressImage(file); // 2026-08-22 신설: 업로드 전 압축(카톡과 비슷한 방식)
+  if (file.size > 8 * 1024 * 1024) { alert(T().alertPhotoTooBig); return; }
+  const attachBtn = document.getElementById('chatAttachBtn');
+  attachBtn.disabled = true;
+  try {
+    const base64Data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const uploadRes = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-photo-upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caseId: currentCaseId, base64Data, contentType: file.type }),
+    });
+    const uploadData = await uploadRes.json();
+    if (!uploadRes.ok) throw new Error(uploadData.error || '업로드 실패');
+
+    const msgRes = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ finderAnonId, registrationId: document.getElementById('stateFound').dataset.registrationId, caseId: currentCaseId, photoUrl: uploadData.url }),
+    });
+    const msgData = await msgRes.json();
+    if (!msgRes.ok) throw new Error(msgData.error || '전송 실패');
+
+    // ⚠ 2026-08-20 (2차) 수정: 서버 응답이 도착하기 전에 8초 폴링(refreshCaseMessages)이
+    // 먼저 이 메시지를 발견해서 화면에 붙여버릴 수 있음(네트워크가 느릴 때 랜덤하게 발생) —
+    // 이미 붙어있으면 또 붙이지 않도록 renderedMsgIds를 먼저 확인
+    if (!msgData.messageId || !renderedMsgIds.has(msgData.messageId)) {
+      appendChatMessage({ id: msgData.messageId, message_type: 'photo', content: uploadData.url, created_at: new Date().toISOString() }, 'me');
+      if (msgData.messageId) renderedMsgIds.add(msgData.messageId);
+    }
+    attemptFinderPushSubscribe(currentCaseId);
+  } catch (e) {
+    console.error('[case] 사진 전송 실패', e);
+    if (String(e.message || '').includes('종료')) {
+      document.getElementById('chatClosedNote').classList.add('show');
+      document.getElementById('chatInput').disabled = true;
+      document.getElementById('chatSendBtn').disabled = true;
+    } else {
+      alert(T().alertPhotoSendFail);
+    }
+  } finally {
+    attachBtn.disabled = false;
+  }
+}
+
+// ── 2026-08-20 신설: 하단 바 "사진" 버튼 — 채팅 모드가 아니면 먼저 채팅을 열고 바로 사진 선택창을 띄움
+document.getElementById('navPhoto').addEventListener('click', async () => {
+  if (currentMode !== 'chat' || !document.getElementById('callingOverlay').classList.contains('show')) {
+    switchMode('chat');
+    // startLiveChatOnly()의 사건 확보(fetch)가 끝나야 currentCaseId가 준비되므로 잠깐 기다림
+    let tries = 0;
+    while (!currentCaseId && tries < 40) { await new Promise((r) => setTimeout(r, 100)); tries++; }
+  }
+  document.getElementById('chatPhotoInput').click();
+});
+
+// 2026-08-23 신설: 날짜 구분선 + 메시지 시간 표시
+let lastRenderedDateKey = null;
+// 2026-08-25: 영어에서는 "3:20 PM", "Monday, August 25, 2026" 형식으로.
+// 한국어는 "오전 3:20", "2026년 8월 25일 월요일" 형식을 그대로 유지함.
+function formatKoreanTime(dateStr){
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (currentLang === 'en') {
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  }
+  let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const ampm = h < 12 ? '오전' : '오후';
+  h = h % 12; if (h === 0) h = 12;
+  return ampm + ' ' + h + ':' + m;
+}
+function formatKoreanDateDivider(dateStr){
+  const d = new Date(dateStr);
+  if (currentLang === 'en') {
+    return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  }
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  return d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + days[d.getDay()] + '요일';
+}
+function insertDateDividerIfNeeded(list, createdAt){
+  if (!createdAt) return false;
+  const dateKey = new Date(createdAt).toISOString().slice(0, 10);
+  if (dateKey === lastRenderedDateKey) return false;
+  lastRenderedDateKey = dateKey;
+  const divider = document.createElement('div');
+  divider.className = 'date-divider';
+  divider.textContent = formatKoreanDateDivider(createdAt);
+  list.appendChild(divider);
+  return true;
+}
+
+// 2026-08-23 신설: 읽음 표시 — 여기(발견자 화면)에서 "상대방"은 소유자
+let ownerLastReadAt = null;
+const messageCreatedAtCache = new Map(); // messageId -> created_at (내가 보낸 메시지만 추적하면 됨)
+function isReadByOtherParty(createdAt){
+  return !!(createdAt && ownerLastReadAt && new Date(ownerLastReadAt) >= new Date(createdAt));
+}
+function refreshReadTags(){
+  messageCreatedAtCache.forEach((createdAt, messageId) => {
+    const statusEl = document.querySelector('.msg-time-row[data-message-id="' + messageId + '"] .msg-read-status');
+    if (statusEl) statusEl.textContent = isReadByOtherParty(createdAt) ? T().readMark : '';
+  });
+}
+async function markCaseAsRead(){
+  if (!currentCaseId) return;
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-mark-read`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caseId: currentCaseId, finderAnonId }),
+    });
+  } catch (e) { /* 읽음표시 실패는 조용히 무시 */ }
+}
+
+// 2026-08-23 신설: 연속으로 보낸 사진을 하나로 묶어 타일(격자)로 보여주는 기능 — 카톡과 같은 방식
+let photoGroupState = null; // { who, groupEl, gridEl, items:[{id,url,filename}], lastMessageId }
+const PHOTO_GROUP_MAX_VISIBLE = 6;
+function renderPhotoGroupGrid(state){
+  const items = state.items;
+  const grid = state.gridEl;
+  const countClass = items.length === 1 ? 'count-1' : items.length === 2 ? 'count-2' : 'count-3plus';
+  grid.className = 'photo-group-grid ' + countClass;
+  grid.innerHTML = '';
+  const visibleCount = Math.min(items.length, PHOTO_GROUP_MAX_VISIBLE);
+  for (let i = 0; i < visibleCount; i++) {
+    const isLastVisibleWithMore = i === visibleCount - 1 && items.length > PHOTO_GROUP_MAX_VISIBLE;
+    const thumb = document.createElement('img');
+    thumb.className = 'photo-group-thumb';
+    thumb.dataset.mid = items[i].id || ''; // 🔴 2026-10-08 한 장씩 지우기
+    thumb.src = items[i].url;
+    thumb.alt = T().altPhoto;
+    thumb.loading = 'lazy';
+    if (isLastVisibleWithMore) {
+      const wrap = document.createElement('div');
+      wrap.className = 'photo-group-more-overlay';
+      wrap.dataset.more = '+' + (items.length - PHOTO_GROUP_MAX_VISIBLE + 1);
+      wrap.appendChild(thumb);
+      wrap.addEventListener('click', () => openPhotoGallery(items, i));
+      grid.appendChild(wrap);
+    } else {
+      thumb.addEventListener('click', () => openPhotoGallery(items, i));
+      grid.appendChild(thumb);
+    }
+  }
+}
+function openPhotoGallery(items, startIndex){
+  document.getElementById('lightbox').classList.add('show');
+  aliascallShowZoomableGallery(document.getElementById('lightboxContent'), items, startIndex);
+}
+
+function appendChatMessage(msg, who){
+  const list = document.getElementById('chatMessages');
+  // 2026-08-20 (2차): 통화 시도 기록(call_log)은 대화 상대 말풍선이 아니라, 가운데 정렬된
+  // 시스템 안내 문구로 표시 (카톡의 "OO님이 입장했습니다" 같은 느낌)
+  if (msg.message_type === 'call_log') {
+    photoGroupState = null;
+    const sysEl = document.createElement('div');
+    sysEl.className = 'chat-system-note';
+    sysEl.textContent = msg.content;
+    list.appendChild(sysEl);
+    list.scrollTop = list.scrollHeight;
+    return null;
+  }
+  if (window.ACMsgDel) ACMsgDel.track(msg); // 🔴 2026-10-08
+  if (window.ACMsgDel && ACMsgDel.isHidden(msg.id)) return null; // 🔴 내 화면에서 지운 것
+  const fi = window.ACFiles ? ACFiles.info(msg) : null;         // 🔴 사진이 아닌 파일
+  const newDate = insertDateDividerIfNeeded(list, msg.created_at); // 2026-08-23 신설
+  if (newDate) photoGroupState = null;
+
+  // 2026-08-23 신설: 사진이면서 바로 직전 사진과 같은 사람이 보낸 거면 → 기존 묶음에 타일로 추가
+  if (msg.message_type === 'photo' && !fi && photoGroupState && photoGroupState.who === who) {
+    photoGroupState.items.push({ id: msg.id, url: msg.content, filename: null });
+    renderPhotoGroupGrid(photoGroupState);
+    const oldTimeRow = list.querySelector('.msg-time-row[data-message-id="' + photoGroupState.lastMessageId + '"]');
+    if (oldTimeRow && msg.created_at) {
+      oldTimeRow.dataset.messageId = msg.id;
+      const timeText = oldTimeRow.querySelector('.msg-time-text');
+      if (timeText) timeText.textContent = formatKoreanTime(msg.created_at);
+    }
+    photoGroupState.lastMessageId = msg.id;
+    if (who === 'me' && msg.id && msg.created_at) { messageCreatedAtCache.set(msg.id, msg.created_at); refreshReadTags(); }
+    list.scrollTop = list.scrollHeight;
+    return photoGroupState.groupEl;
+  }
+  if (msg.message_type !== 'photo' || fi) photoGroupState = null;
+
+  const el = document.createElement('div');
+  const isPhoto = msg.message_type === 'photo' && !fi;
+  el.className = 'chat-bubble ' + who + (isPhoto ? ' photo photo-group' : '');
+  if (isPhoto) {
+    const grid = document.createElement('div');
+    el.appendChild(grid);
+    photoGroupState = { who, groupEl: el, gridEl: grid, items: [{ id: msg.id, url: msg.content, filename: null }], lastMessageId: msg.id };
+    el._pg = photoGroupState; // 🔴 2026-10-08 지우기에서 묶음을 찾습니다
+    renderPhotoGroupGrid(photoGroupState);
+  } else if (fi) {
+    ACFiles.render(el, fi); // 🔴 2026-10-08 동영상·음성·문서
+  } else {
+    // 2026-08-22 신설: 메시지가 이모지 1~3개로만 이루어져 있으면 큰 애니메이션 스티커로 표시
+    const emojiOnly = aliascallExtractEmojiOnly(msg.content);
+    if (emojiOnly) {
+      el.classList.add('emoji-sticker-bubble');
+      el.style.background = 'none';
+      emojiOnly.forEach((item) => {
+        const eimg = document.createElement('img');
+        eimg.src = item.url; eimg.alt = item.char; eimg.className = 'emoji-sticker';
+        eimg.onerror = () => { eimg.replaceWith(document.createTextNode(item.char)); };
+        el.appendChild(eimg);
+      });
+    } else {
+      el.textContent = msg.content;
+      /* 🔴 2026-10-01 — 부름 초대 링크는 카드로 크게(두 앱 잇기) */
+      if (window.ACBurum) { const bc = ACBurum.card(msg.content); if (bc) el.appendChild(bc); }
+    }
+  }
+  list.appendChild(el);
+
+  // 2026-08-23 신설: 시간 표시 + 읽음 상태(내가 보낸 메시지만)
+  if (msg.created_at) {
+    if (msg.id) el.dataset.messageId = msg.id;
+    const timeRow = document.createElement('div');
+    timeRow.className = 'msg-time-row ' + (who === 'me' ? 'me' : 'them');
+    if (msg.id) timeRow.dataset.messageId = msg.id;
+    timeRow.innerHTML = `<span class="msg-time-text">${formatKoreanTime(msg.created_at)}</span>` + (who === 'me' ? '<span class="msg-read-status"></span>' : '');
+    list.appendChild(timeRow);
+    if (who === 'me' && msg.id) { messageCreatedAtCache.set(msg.id, msg.created_at); refreshReadTags(); }
+  }
+
+  list.scrollTop = list.scrollHeight;
+  return el; // 2026-08-21: 마지막으로 받은 메시지 반짝임 표시에 쓰기 위해 요소를 반환하도록 수정
+}
+
+/* 🔴🔴 2026-10-09 — 통화 녹음 · 녹화는 상대가 허락해야만 (aliascall_rec.js)
+   통화가 이어지면 🔴 · 📷 단추가 통화 단추 줄에 생깁니다. 끊을 때는 ACRec.end() 가 먼저 불립니다. */
+function acRecScope(caseId){ return { scope: 'case', scopeId: caseId || currentCaseId, finderAnonId: finderAnonId }; }
+function acRecBegin(which, mode, caseId){
+  if (!window.ACRec) return;
+  const out = (which === 'out');
+  ACRec.arm({
+    channel: out ? rtChannel : finderRtChannel,
+    pcs: () => [out ? pc : finderPc],
+    local: () => (out ? localStream : finderLocalStream),
+    video: mode === 'video',
+    myName: () => ((document.getElementById('callerNameInput') || {}).value || '').trim() || (currentLang === 'en' ? 'The finder' : '발견한 분'),
+    peerName: () => (currentLang === 'en' ? 'The owner' : '주인'),
+    controls: document.getElementById('callControls'),
+    scope: () => acRecScope(caseId),
+    token: null,
+  });
+}
+if (window.ACRec) {
+  ACRec.init({ sb: sb, url: SUPABASE_URL, lang: () => currentLang });
+  ACRec.listButton(document.querySelector('#chatOnlyHeader > div'), { scope: () => acRecScope(null), token: null },
+                   document.getElementById('chatOnlyEndBtn'));
+}
+
+/* 🔴 2026-10-08 — 내가 보낸 글 · 사진을 꾹 눌러 지웁니다 (aliascall_msg_delete.js) */
+if (window.ACMsgDel) ACMsgDel.init({
+  list: document.getElementById('chatMessages'),
+  renderGroup: renderPhotoGroupGrid,
+  del: async (id) => {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-message-delete`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId: id, caseId: currentCaseId, finderAnonId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  },
+});
+
+// ── 2026-08-21 신설: "마지막으로 받은 메시지" 반짝임 표시 — 상대가 보낸 것 중 가장 최근 것만
+// 눈에 띄게 표시하고, 클릭/포커스하면 원래대로 돌아옴 ──
+let lastHighlightedMsgEl = null;
+function markNewReceivedHighlight(el){
+  if (!el) return;
+  if (lastHighlightedMsgEl) lastHighlightedMsgEl.classList.remove('new-highlight');
+  el.classList.add('new-highlight');
+  lastHighlightedMsgEl = el;
+}
+function clearNewReceivedHighlight(){
+  if (lastHighlightedMsgEl) { lastHighlightedMsgEl.classList.remove('new-highlight'); lastHighlightedMsgEl = null; }
+}
+document.getElementById('chatMessages').addEventListener('click', clearNewReceivedHighlight);
+document.getElementById('chatInput').addEventListener('focus', clearNewReceivedHighlight);
+window.addEventListener('focus', clearNewReceivedHighlight);
+/* 🔴 2026-10-01 두 앱 잇기 — 안내창에서 보낸 글은 보통 메시지와 같은 길로 나갑니다 */
+document.getElementById('burumLinkBtn').addEventListener('click', function(){
+  if (!window.ACBurum) return;
+  ACBurum.openSheet(async function(text){
+    const inp = document.getElementById('chatInput');
+    inp.value = text;
+    await sendChatMessage();
+  });
+});
+try { if ((localStorage.getItem('aliascall_lang') || '').indexOf('en') === 0) document.getElementById('burumLinkBtn').textContent = '💬 Continue on Burum'; } catch (e) {}
+
+async function sendChatMessage(){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || !currentCaseId) return;
+  const sendBtn = document.getElementById('chatSendBtn');
+  sendBtn.disabled = true;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ finderAnonId, registrationId: document.getElementById('stateFound').dataset.registrationId, caseId: currentCaseId, text }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '전송 실패');
+    // ⚠ 2026-08-20 (2차) 수정: 서버 응답 전에 폴링이 먼저 렌더링했을 수 있어 중복 방지 확인
+    if (!data.messageId || !renderedMsgIds.has(data.messageId)) {
+      appendChatMessage({ id: data.messageId, message_type: 'text', content: text, created_at: new Date().toISOString() }, 'me');
+      if (data.messageId) renderedMsgIds.add(data.messageId);
+    }
+    input.value = '';
+    attemptFinderPushSubscribe(currentCaseId); // 2026-08-20: 첫 메시지 보낸 김에 자연스럽게 답장 알림도 물어봄
+  } catch (e) {
+    console.error('[case] 메시지 전송 실패', e);
+    if (String(e.message || '').includes('종료')) {
+      document.getElementById('chatClosedNote').classList.add('show');
+      input.disabled = true;
+      sendBtn.disabled = true;
+      return;
+    }
+    alert(T().alertMsgSendFail);
+  } finally {
+    if (!input.disabled) sendBtn.disabled = false;
+  }
+}
+document.getElementById('chatSendBtn').addEventListener('click', sendChatMessage);
+document.getElementById('chatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
+
+document.getElementById('endCallBtn').addEventListener('click', () => {
+  if (activeCallRole === 'incoming') endIncomingCall(false); else endCall(false);
+});
+document.getElementById('endCallBtnInitial').addEventListener('click', () => {
+  if (activeCallRole === 'incoming') endIncomingCall(false); else endCall(false);
+});
+
+// ── 2026-08-20 신설: 하단 고정 4버튼 — 지금 뭘 하고 있든(통화중/채팅중/문자입력중) 상관없이
+// 언제든 다른 버튼을 누르면 하던 걸 정리하고 즉시 그걸로 전환됨. 예전처럼 "종료 → 메뉴로
+// 돌아가기 → 다시 선택" 단계가 필요 없음. ──
+function updateBottomNavActive(mode){
+  document.querySelectorAll('.bottom-nav-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+}
+
+function switchMode(mode){
+  const overlayActive = document.getElementById('callingOverlay').classList.contains('show');
+
+  if (mode === 'message') {
+    if (overlayActive) endCall(false); // 통화/채팅 중이었으면 상대에게 알리고 정리
+    document.getElementById('textMsgBlock').classList.add('show');
+    document.getElementById('textMsgInput').focus();
+    updateBottomNavActive('message');
+    return;
+  }
+
+  // 문자메세지 입력창이 열려있었다면 닫고, 통화/채팅 중이었으면 정리 후 바로 새 모드 시작
+  document.getElementById('textMsgBlock').classList.remove('show');
+  if (overlayActive) {
+    if (currentMode === mode) return; // 이미 같은 모드 진행 중이면 중복 재시작 방지
+    endCall(false);
+  }
+
+  if (mode === 'chat') startLiveChatOnly();
+  else startCall(mode); // 'voice' | 'video'
+  updateBottomNavActive(mode);
+}
+
+document.getElementById('navLiveChat').addEventListener('click', () => switchMode('chat'));
+document.getElementById('navVoice').addEventListener('click', () => switchMode('voice'));
+document.getElementById('navVideo').addEventListener('click', () => switchMode('video'));
+document.getElementById('navTextMsg').addEventListener('click', () => switchMode('message'));
+
+// ── 통화 시도 없이 "문자로 먼저 메시지 보내기" — 모르는 사람끼리는 전화보다 문자가 먼저인 경우가
+// 많아서 신설. 2026-08-20 (2차): 예전엔 별도 시스템(webrtc_sessions.left_message)에만 저장돼서
+// 소유자 쪽 "부재중 메시지"라는 별도 화면에서만 보였는데, 채팅·사진과 보는 곳이 갈라져서
+// 혼란스럽다는 피드백을 반영 — 이제 채팅과 똑같은 "사건함" 시스템에 통합 저장됨. 소유자는
+// 마이페이지 "사건함" 한 곳만 보면 문자든 채팅이든 사진이든 시간순으로 다 확인 가능함.
+// (webrtc_sessions에도 여전히 가볍게 기록을 남기는데, 이건 실시간 알림 배너/딩동 소리를
+//  기존 구조 그대로 재사용하기 위함일 뿐 — 실제 내용은 사건함이 원본임)
+document.getElementById('textMsgSendBtn').addEventListener('click', async () => {
+  const text = document.getElementById('textMsgInput').value.trim();
+  if (!text) return;
+  const btn = document.getElementById('textMsgSendBtn');
+  const t = I18N[currentLang];
+  btn.disabled = true;
+  btn.textContent = t.leaveMsgSending;
+
+  const registrationId = document.getElementById('stateFound').dataset.registrationId;
+
+  try {
+    // 1) 사건 확보 (기존 열린 사건 있으면 재사용, 없으면 새로 생성)
+    const openRes = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-open`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registrationId, finderAnonId }),
+    });
+    const openData = await openRes.json();
+    if (!openRes.ok) throw new Error(openData.error || '사건 생성 실패');
+    acBeaconRemember(openData.caseId);
+
+    // 2) 사건함에 실제 문자 내용 저장
+    const msgRes = await fetch(`${SUPABASE_URL}/functions/v1/aliascall-case-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ finderAnonId, registrationId, caseId: openData.caseId, text }),
+    });
+    const msgData = await msgRes.json();
+    if (!msgRes.ok) throw new Error(msgData.error || '전송 실패');
+
+    // 3) 소유자에게 실시간 배너/딩동 알림이 뜨도록, 기존 알림 트리거 구조도 같이 기록
+    //    (내용의 원본은 사건함이고, 이건 그냥 "알림 울려라" 신호로만 씀)
+    await sb.from('webrtc_sessions').insert({
+      registration_id: registrationId,
+      session_token: (crypto.randomUUID ? crypto.randomUUID() : 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2)),
+      call_type: 'message',
+      case_id: openData.caseId,
+    });
+
+    document.getElementById('textMsgInput').value = '';
+    document.getElementById('textMsgBlock').classList.remove('show');
+    document.getElementById('textMsgSentNote').classList.add('show');
+  } catch (e) {
+    console.error('[text-msg] 저장 실패', e);
+    if (tempGate(e.message)) return;   // 2026-09-28
+    alert(t.leaveMsgFailed);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t.textMsgSend;
+  }
+});
+
+// ⚠ 탭을 그냥 닫거나 다른 페이지로 이동할 때도 최선을 다해 종료 신호를 남김 (100% 보장은
+// 안 되지만, 위의 pc.onconnectionstatechange 감지와 함께 이중 안전장치 역할)
+window.addEventListener('pagehide', () => {
+  if (currentSessionToken && (pc || rtChannel)) {
+    try {
+      sb.from('webrtc_sessions').update({ ended_reason: 'finder_left', ended_at: new Date().toISOString() }).eq('session_token', currentSessionToken);
+    } catch (e) { /* 페이지 종료 중이라 실패해도 무시 */ }
+  }
+});
+
+init();
+applyLang(currentLang);
+</script>
+</div><!-- /app-shell -->
+<script src="aliascall_block.js"></script>
+<script src="aliascall_beacon.js?v=20261101"></script>
+<script>
+/* 🔴 2026-10-29 "나도 만들기" 한 줄: 로그인 안 한 방문자(QR을 찍고 연락하는 분)에게만 */
+(function(){
+  setTimeout(async function(){
+    try {
+      var a = document.getElementById('mineLink'); if (!a || typeof sb === 'undefined') return;
+      var s = (await sb.auth.getSession()).data.session;
+      if (s) return;
+      var en = false; try { en = (localStorage.getItem('aliascall_lang') || '').indexOf('en') === 0; } catch (e) {}
+      if (en) { document.getElementById('mineT1').textContent = 'This contact keeps your number hidden'; document.getElementById('mineT2').textContent = 'Make one free for your car, things or pet ›'; }
+      a.style.display = 'block';
+    } catch (e) {}
+  }, 1200);
+})();
+/* =====================================================================
+   🔴 2026-10-18 — 연결 방식 (회사 결정 2026-10-17)
+   · 차량은 주인의 이용 기간(+유예 30일)이 끝나도 메시지 · 채팅 · 사진으로 계속 연결
+   · 음성 · 영상 통화는 이용권이 있을 때만 — DB(connect_mode_guard)가 최종으로 지킵니다
+   · 서버는 'full' | 'message_only' | 'blocked' 낱말 하나만 돌려줍니다(개인정보 없음)
+   ===================================================================== */
+function acModeText(){
+  return (typeof currentLang !== 'undefined' && currentLang === 'en') ? {
+    note: '✉️ You can reach this vehicle\'s owner by message, chat or photo. The owner gets a notification right away.',
+    callOff: 'Calls are not available for this vehicle right now. Please leave a message — the owner is notified right away.',
+  } : {
+    note: '✉️ 이 차량은 메시지 · 채팅 · 사진으로 연락할 수 있어요. 남기시면 차주에게 바로 알림이 갑니다.',
+    callOff: '지금 이 차량은 통화 대신 메시지로 연락할 수 있어요. 메시지를 남기시면 차주에게 바로 알림이 갑니다.',
+  };
+}
+/* 언어를 바꾸면 안내 문구도 다시 씁니다 */
+document.addEventListener('click', function(e){
+  if (e.target && e.target.closest && e.target.closest('.lang-btn,[data-lang]')) {
+    setTimeout(function(){ var n = document.getElementById('acModeNote'); if (n && n.style.display !== 'none') n.textContent = acModeText().note; }, 50);
+  }
+});
+function acSetMessageOnly(on){
+  ['navVoice', 'navVideo'].forEach(function(id){
+    var b = document.getElementById(id); if (b) b.style.display = on ? 'none' : '';
+  });
+  var note = document.getElementById('acModeNote');
+  if (on && !note) {
+    note = document.createElement('div');
+    note.id = 'acModeNote';
+    note.style.cssText = 'margin:12px 0;padding:12px 14px;border-radius:12px;background:#FFF4EC;color:#7A3A1C;font-size:14px;line-height:1.55;word-break:keep-all';
+    var host = document.querySelector('#stateFound .found-card') || document.getElementById('stateFound');
+    if (host) host.appendChild(note);
+  }
+  if (note) { note.textContent = acModeText().note; note.style.display = on ? '' : 'none'; }
+}
+async function acApplyConnectMode(regId){
+  try {
+    if (!regId) return;
+    var r = await sb.rpc('registration_connect_mode', { p_registration_id: regId });
+    window.acConnectModeVal = r.error ? '' : r.data;
+    acSetMessageOnly(window.acConnectModeVal === 'message_only');
+  } catch (e) { /* 함수가 아직 없으면(옛 DB) 예전처럼 둡니다 */ }
+}
+</script>
+<script src="aliascall_brandhome.js?v=20261101"></script>
+</body>
+</html>

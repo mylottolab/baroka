@@ -1,0 +1,147 @@
+/* 바로카 (baroka.kr) — 2026-11-03
+   에일리어스콜(초록 · 둥근 카드)과 다르게: 도로 표지 파랑 + 검정 + 번호판 흰색, 각진 굵은 글씨 */
+:root{
+  --bk-bg:#EEF1F6; --bk-card:#FFFFFF; --bk-ink:#0B1220; --bk-sub:#4A5568; --bk-line:#D8DEE8;
+  --bk-blue:#1450F5; --bk-blue-ink:#FFFFFF; --bk-blue-soft:#E3EBFF;
+  --bk-yel:#FFC400; --bk-yel-ink:#1B1400;
+  --bk-ok:#0E8A4F; --bk-bad:#C8321E;
+  --bk-plate:#FFFFFF; --bk-plate-ink:#0B1220; --bk-plate-edge:#0B1220;
+  --bk-shadow:0 2px 0 rgba(11,18,32,.08), 0 8px 24px rgba(11,18,32,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bk-bg:#0A0F1A; --bk-card:#141B29; --bk-ink:#EEF2F8; --bk-sub:#A3AEC2; --bk-line:#26314A;
+    --bk-blue:#3D74FF; --bk-blue-soft:#18264A;
+    --bk-shadow:0 2px 0 rgba(0,0,0,.3);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bk-bg);color:var(--bk-ink);
+  font-family:"Pretendard","Noto Sans KR",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  -webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+a{color:inherit}
+button{font:inherit}
+
+/* 틀: 가운데 한 줄, 넓은 화면이면 양옆 여백에 광고 타일 */
+.bk-shell{display:flex;justify-content:center;gap:24px;padding:0 16px}
+.bk-main{width:100%;max-width:480px;min-height:100vh;min-height:100dvh;
+  padding:calc(env(safe-area-inset-top) + 12px) 0 calc(env(safe-area-inset-bottom) + 28px);display:flex;flex-direction:column;gap:14px}
+.bk-rail{display:none;width:200px;flex:none;padding-top:84px}
+.bk-rail .bk-ads{position:sticky;top:20px;grid-template-columns:1fr}
+@media (min-width:1000px){ .bk-rail{display:block} .bk-main .bk-ads-inline{display:none} }
+
+/* 위 막대 */
+.bk-top{display:flex;align-items:center;gap:10px;min-height:48px}
+.bk-logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--bk-ink);flex:1;min-width:0}
+.bk-logo .mk{display:flex;align-items:stretch;height:30px;border:2.5px solid var(--bk-plate-edge);border-radius:7px;overflow:hidden;background:var(--bk-plate)}
+.bk-logo .mk i{width:9px;background:var(--bk-blue)}
+.bk-logo .mk b{display:flex;align-items:center;padding:0 7px;font-size:15px;font-weight:900;color:var(--bk-plate-ink);letter-spacing:.5px}
+.bk-logo .nm{font-size:21px;font-weight:900;letter-spacing:-.5px}
+.bk-logo .nm em{font-style:normal;color:var(--bk-blue)}
+.bk-pill{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;border-radius:12px;border:2px solid var(--bk-ink);
+  background:var(--bk-card);color:var(--bk-ink);font-weight:800;font-size:14.5px;text-decoration:none;cursor:pointer;position:relative}
+.bk-pill .dot{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--bk-bad);color:#fff;font-size:11px;
+  display:none;align-items:center;justify-content:center;padding:0 5px;font-weight:900}
+.bk-pill .dot.on{display:flex}
+.bk-back{width:44px;height:44px;border-radius:12px;border:2px solid var(--bk-line);background:var(--bk-card);color:var(--bk-ink);
+  font-size:20px;font-weight:900;display:flex;align-items:center;justify-content:center;text-decoration:none;flex:none;cursor:pointer}
+.bk-h1{margin:0;font-size:22px;font-weight:900;flex:1;min-width:0;letter-spacing:-.4px}
+
+/* 카드 */
+.bk-card{background:var(--bk-card);border-radius:18px;padding:18px;box-shadow:var(--bk-shadow);display:flex;flex-direction:column;gap:12px}
+.bk-card h2{margin:0;font-size:18px;font-weight:900;letter-spacing:-.3px}
+.bk-sub{margin:0;font-size:14px;color:var(--bk-sub);line-height:1.6}
+.bk-hero{background:var(--bk-blue);color:#fff;border-radius:22px;padding:22px 18px 18px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
+.bk-hero::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;border:22px solid rgba(255,255,255,.09)}
+.bk-hero h1{margin:0;font-size:27px;line-height:1.25;font-weight:900;letter-spacing:-.8px}
+.bk-hero p{margin:0;font-size:14.5px;line-height:1.55;opacity:.92}
+
+/* 번호판 입력 — 실제 번호판처럼 */
+.bk-plate{display:flex;align-items:stretch;height:74px;background:var(--bk-plate);border:4px solid var(--bk-plate-edge);border-radius:12px;overflow:hidden;
+  box-shadow:0 4px 0 rgba(0,0,0,.25)}
+.bk-plate .band{width:26px;background:#1A3FB0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:7px;gap:3px}
+.bk-plate .band::before{content:"";width:13px;height:13px;border-radius:50%;background:conic-gradient(#D7262E 0 50%,#1A3FB0 0)}
+.bk-plate .band span{color:#fff;font-size:8px;font-weight:900;letter-spacing:.4px}
+.bk-plate input{flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--bk-plate-ink);
+  font-size:31px;font-weight:900;text-align:center;letter-spacing:1.5px;font-family:inherit;padding:0 8px}
+.bk-plate input::placeholder{color:#B7BFCC;font-weight:800}
+.bk-plate.small{height:52px;border-width:3px;border-radius:10px}
+.bk-plate.small .band{width:18px}
+.bk-plate.small input{font-size:22px}
+
+/* 단추 */
+.bk-btn{height:56px;border:none;border-radius:14px;background:var(--bk-ink);color:#fff;font-size:17px;font-weight:900;cursor:pointer;width:100%;
+  display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;letter-spacing:-.2px}
+.bk-btn.yel{background:var(--bk-yel);color:var(--bk-yel-ink)}
+.bk-btn.blue{background:var(--bk-blue);color:#fff}
+.bk-btn.ghost{background:var(--bk-card);color:var(--bk-ink);border:2px solid var(--bk-line)}
+.bk-btn.white{background:#fff;color:var(--bk-ink)}
+.bk-btn.line-w{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.65)}
+.bk-btn.sm{height:44px;font-size:15px;border-radius:12px}
+.bk-btn:disabled{opacity:.5;cursor:default}
+.bk-row{display:flex;gap:10px}
+.bk-row > *{flex:1;min-width:0}
+
+/* 값 표 */
+.bk-price{display:flex;align-items:baseline;gap:6px}
+.bk-price b{font-size:30px;font-weight:900;letter-spacing:-1px}
+.bk-price span{font-size:14px;color:var(--bk-sub);font-weight:700}
+.bk-tags{display:flex;flex-wrap:wrap;gap:6px}
+.bk-tag{font-size:12.5px;font-weight:800;padding:5px 9px;border-radius:8px;background:var(--bk-blue-soft);color:var(--bk-blue)}
+.bk-tag.y{background:#FFF3C4;color:#6B4E00}
+
+/* 찾은 차 */
+.bk-res{display:flex;flex-direction:column;gap:8px}
+.bk-car{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;border:2px solid var(--bk-line);background:var(--bk-card);text-decoration:none;color:inherit}
+.bk-car .pl{border:2.5px solid var(--bk-plate-edge);border-radius:7px;background:var(--bk-plate);color:var(--bk-plate-ink);font-weight:900;font-size:17px;padding:5px 9px;white-space:nowrap}
+.bk-car .tx{flex:1;min-width:0;font-size:13px;color:var(--bk-sub);line-height:1.4}
+.bk-car .go{font-weight:900;color:var(--bk-blue);white-space:nowrap}
+
+/* 순서 */
+.bk-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.bk-step{background:var(--bk-bg);border-radius:12px;padding:12px 8px;text-align:center;font-size:12.5px;line-height:1.45;color:var(--bk-sub)}
+.bk-step b{display:block;font-size:22px;margin-bottom:4px}
+.bk-step strong{display:block;color:var(--bk-ink);font-size:13.5px;margin-bottom:2px}
+
+/* 광고 타일 */
+.bk-ads{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bk-ad{position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-height:118px;border-radius:14px;overflow:hidden;
+  text-decoration:none;color:var(--bk-ink);border:1.5px solid var(--bk-line);background:#fff;padding:10px}
+.bk-ad img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.bk-ad .t{position:relative;font-weight:900;font-size:14.5px;line-height:1.3}
+.bk-ad .s{position:relative;font-size:12px;opacity:.8;margin-top:2px}
+.bk-ad.img .t,.bk-ad.img .s{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.bk-ad.img::after{content:"";position:absolute;inset:40% 0 0 0;background:linear-gradient(transparent,rgba(0,0,0,.55))}
+.bk-ad.img .t,.bk-ad.img .s{z-index:1}
+.bk-ad .ad{position:absolute;top:7px;right:7px;z-index:1;font-size:10px;font-weight:900;padding:2px 5px;border-radius:5px;background:rgba(11,18,32,.65);color:#fff}
+.bk-ad.empty{border-style:dashed;background:transparent;color:var(--bk-sub);align-items:center;justify-content:center;text-align:center}
+.bk-ads-h{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--bk-sub);font-weight:800;margin:2px 2px -4px}
+
+/* 입력 */
+.bk-lbl{font-size:14px;font-weight:800;display:block;margin:2px 0 6px}
+.bk-in{width:100%;height:52px;border:2px solid var(--bk-line);border-radius:12px;padding:0 14px;font:inherit;font-size:17px;background:var(--bk-card);color:var(--bk-ink)}
+.bk-in:focus{outline:none;border-color:var(--bk-blue)}
+.bk-msg{display:none;border-radius:12px;padding:11px 14px;font-size:14px;line-height:1.55;white-space:pre-line}
+.bk-msg.on{display:block}
+.bk-msg.bad{background:#FDECEA;color:#8F2412}
+.bk-msg.ok{background:#E3F5EA;color:#0B5A33}
+.bk-msg.info{background:var(--bk-blue-soft);color:var(--bk-ink)}
+
+/* 내 차 */
+.bk-mycar{border:2px solid var(--bk-line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--bk-card)}
+.bk-mycar .hd{display:flex;align-items:center;gap:10px}
+.bk-mycar .meta{font-size:13px;color:var(--bk-sub)}
+.bk-acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.bk-acts button,.bk-acts a{height:46px;border-radius:12px;border:2px solid var(--bk-line);background:var(--bk-bg);color:var(--bk-ink);font-weight:800;font-size:14.5px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
+.bk-acts .wide{grid-column:1/-1;background:var(--bk-blue);border-color:var(--bk-blue);color:#fff}
+
+/* 아래 시트 */
+.bk-sheet-bg{position:fixed;inset:0;background:rgba(5,10,20,.55);z-index:9000;display:flex;align-items:flex-end;justify-content:center}
+.bk-sheet{width:100%;max-width:520px;background:var(--bk-card);border-radius:22px 22px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom) + 20px);
+  display:flex;flex-direction:column;gap:12px;max-height:92vh;overflow:auto}
+.bk-sheet h3{margin:0;font-size:19px;font-weight:900}
+
+.bk-foot{font-size:12px;color:var(--bk-sub);text-align:center;line-height:1.7;padding:8px 0}
+.bk-foot a{color:var(--bk-sub)}
+.bk-hide{display:none !important}

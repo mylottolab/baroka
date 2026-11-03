@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>내 차 · 바로카</title>
+<meta name="theme-color" content="#1450F5">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="baroka_icon_192.png">
+<link rel="apple-touch-icon" href="baroka_icon_192.png">
+<link rel="stylesheet" href="baroka.css?v=20261103">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<div class="bk-shell">
+  <aside class="bk-rail"><div class="bk-ads" data-n="3"></div></aside>
+  <main class="bk-main">
+    <header class="bk-top">
+      <a class="bk-back" href="index.html" aria-label="처음 화면">‹</a>
+      <h1 class="bk-h1">내 차</h1>
+      <button class="bk-pill bk-hide" id="out" type="button">로그아웃</button>
+    </header>
+
+    <div class="bk-msg" id="msg"></div>
+
+    <!-- 로그인 전 -->
+    <section class="bk-card bk-hide" id="auth">
+      <h2 id="authTtl">차를 등록하려면 계정이 필요해요</h2>
+      <p class="bk-sub">닉네임과 비밀번호만 정하면 됩니다. 전화번호 · 이메일은 받지 않아요.<br>에일리어스콜 계정이 있으면 그대로 들어오세요.</p>
+      <div class="bk-row" role="tablist">
+        <button class="bk-btn sm" id="tNew" type="button">처음이에요</button>
+        <button class="bk-btn ghost sm" id="tOld" type="button">계정이 있어요</button>
+      </div>
+      <div><label class="bk-lbl" for="nick">닉네임</label><input class="bk-in" id="nick" autocomplete="username" maxlength="20" placeholder="예) 하늘차주"></div>
+      <div><label class="bk-lbl" for="pw">비밀번호</label><input class="bk-in" id="pw" type="password" autocomplete="new-password" placeholder="6자리 이상"></div>
+      <div class="bk-msg info" id="pwNote" style="display:block">⚠ 비밀번호를 잊으면 찾을 수 없어요. 꼭 적어 두세요.</div>
+      <button class="bk-btn blue" id="authGo" type="button">가입하고 시작하기</button>
+    </section>
+
+    <!-- 로그인 뒤 -->
+    <section class="bk-hide" id="me" style="display:flex;flex-direction:column;gap:14px">
+      <a class="bk-btn" href="inbox.html" id="inboxBtn">📨 받은 연락 보기<span class="dot" id="dot" style="position:static;margin-left:4px"></span></a>
+      <div id="cars" style="display:flex;flex-direction:column;gap:12px"></div>
+      <div id="others"></div>
+      <section class="bk-card">
+        <div style="display:flex;align-items:center;justify-content:space-between"><h2 id="addTtl">내 차 등록하기</h2><span class="bk-tag y">월 요금 없음</span></div>
+        <div class="bk-price"><b id="pReg">2,500원</b><span>한 번 내면 끝 · 차 바꿀 때까지</span></div>
+        <p class="bk-sub" id="creditNote"></p>
+        <button class="bk-btn blue" id="addBtn" type="button">＋ 차 등록하기</button>
+      </section>
+      <div class="bk-ads-h bk-ads-inline"><span>광고</span></div>
+      <div class="bk-ads bk-ads-inline" data-n="2"></div>
+      <p class="bk-foot"><span id="who"></span><br>번호판을 바꾸면 번호 변경 <b id="pChg">2,500원</b> · 차를 팔거나 폐차하면 무료로 지울 수 있어요.</p>
+    </section>
+  </main>
+  <aside class="bk-rail"><div class="bk-ads" data-n="3"></div></aside>
+</div>
+
+<script src="baroka.js?v=20261103"></script>
+<script src="aliascall_web_pay.js"></script>
+<script src="aliascall_store.js"></script>
+<script src="aliascall_parking_plate.js?v=20261103"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var PEND = 'baroka_pending';           // 결제하러 간 사이 기억해 둘 것 {kind:'reg'|'change', plate, make, color, reg}
+  var ST = null, mode = 'new';
+  function say(t, kind){ var m = $('msg'); m.className = 'bk-msg on ' + (kind || 'info'); m.textContent = t; m.scrollIntoView({ block: 'nearest' }); }
+  function hush(){ $('msg').className = 'bk-msg'; }
+  function won(n){ return Number(n || 0).toLocaleString('ko-KR') + '원'; }
+  function pendGet(){ try { return JSON.parse(localStorage.getItem(PEND) || 'null'); } catch (e) { return null; } }
+  function pendSet(o){ try { o ? localStorage.setItem(PEND, JSON.stringify(o)) : localStorage.removeItem(PEND); } catch (e) {} }
+  var ERR = { no_credit: '결제가 아직 확인되지 않았어요. 잠시 뒤 다시 열어 주세요.', bad_plate: '번호판 모양이 아니에요. 예) 12가 3456, 123나 4567',
+              not_mine: '내 차가 아니에요.', same: '지금 번호와 같아요.', login: '다시 로그인해 주세요.', not_vehicle: '차량 등록이 아니에요.' };
+
+  /* ── 로그인 ── */
+  function authMode(m){
+    mode = m;
+    $('tNew').className = 'bk-btn sm' + (m === 'new' ? '' : ' ghost');
+    $('tOld').className = 'bk-btn sm' + (m === 'old' ? '' : ' ghost');
+    $('authGo').textContent = m === 'new' ? '가입하고 시작하기' : '로그인';
+    $('pwNote').style.display = m === 'new' ? 'block' : 'none';
+    $('pw').setAttribute('autocomplete', m === 'new' ? 'new-password' : 'current-password');
+  }
+  $('tNew').onclick = function(){ authMode('new'); };
+  $('tOld').onclick = function(){ authMode('old'); };
+  $('authGo').onclick = async function(){
+    hush(); var b = this; b.disabled = true;
+    try {
+      var r = mode === 'new' ? await BK.signup($('nick').value, $('pw').value) : await BK.login($('nick').value, $('pw').value);
+      if (!r.ok) { say(r.error, 'bad'); return; }
+      await load();
+    } finally { b.disabled = false; }
+  };
+  $('pw').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('authGo').click(); });
+  $('out').onclick = async function(){ await BK.logout(); location.reload(); };
+
+  /* ── 상태 ── */
+  async function load(){
+    var u = await BK.user();
+    $('auth').classList.toggle('bk-hide', !!u);
+    $('me').classList.toggle('bk-hide', !u);
+    $('out').classList.toggle('bk-hide', !u);
+    if (!u) { authMode(new URLSearchParams(location.search).get('login') ? 'old' : 'new'); return; }
+    var r = await BK.sb.rpc('baroka_state');
+    if (r.error || !r.data || !r.data.ok) { say('불러오지 못했어요. ' + ((r.error && r.error.message) || ''), 'bad'); return; }
+    ST = r.data;
+    $('who').textContent = (ST.nickname || '') + ' 님으로 로그인됨';
+    $('pReg').textContent = won(ST.price_reg); $('pChg').textContent = won(ST.price_change);
+    $('addTtl').textContent = ST.cars.length ? '차 한 대 더 등록하기' : '내 차 등록하기';
+    var notes = [];
+    if (ST.reg_credits) notes.push('🎟 쓰지 않은 등록권 ' + ST.reg_credits + '장 — 결제 없이 바로 등록돼요.');
+    if (ST.change_credits) notes.push('🎟 쓰지 않은 번호 변경권 ' + ST.change_credits + '장');
+    $('creditNote').textContent = notes.join('\n'); $('creditNote').style.whiteSpace = 'pre-line';
+    $('addBtn').textContent = ST.reg_credits ? '＋ 등록권으로 바로 등록' : '＋ 차 등록하기 · ' + won(ST.price_reg);
+    drawCars();
+    BK.unread($('dot'));
+    await resume();
+  }
+
+  function drawCars(){
+    $('cars').innerHTML = ST.cars.map(function(c){
+      var meta = [c.make, c.color].filter(Boolean).join(' · ');
+      return '<div class="bk-mycar" data-id="' + c.id + '">' +
+        '<div class="hd"><label class="bk-plate small" style="flex:1"><span class="band"></span><input readonly value="' + BK.esc(BK.plateNice(c.plate)) + '" aria-label="차 번호"></label></div>' +
+        '<div class="meta">' + (meta ? BK.esc(meta) + ' · ' : '') + new Date(c.created_at).toLocaleDateString('ko-KR') + ' 등록' + (c.changes ? ' · 번호 변경 ' + c.changes + '번' : '') + '</div>' +
+        (c.dup ? '<div class="bk-msg bad on" style="font-size:13px">같은 번호로 등록한 분이 또 있어요. 차를 산 분이라면 그대로 쓰셔도 되고, 이상하면 문의해 주세요.</div>' : '') +
+        '<div class="bk-acts">' +
+          '<button type="button" data-a="print">🖨 주차 안내판</button>' +
+          '<button type="button" data-a="qr">▦ 내 QR</button>' +
+          '<button type="button" data-a="change">🔁 번호 바꿨어요</button>' +
+          '<button type="button" data-a="remove">🗑 차를 팔았어요</button>' +
+        '</div></div>';
+    }).join('');
+    $('cars').querySelectorAll('[data-a]').forEach(function(b){
+      var id = b.closest('[data-id]').getAttribute('data-id');
+      var car = ST.cars.find(function(c){ return c.id === id; });
+      b.onclick = function(){ ({ print: doPrint, qr: doQr, change: doChange, remove: doRemove })[b.getAttribute('data-a')](car); };
+    });
+    $('others').innerHTML = (ST.other_cars || []).length ? '<section class="bk-card"><h2>에일리어스콜에 등록한 차</h2>' +
+      '<p class="bk-sub">바로카로 옮기면 월 요금 없이 전화 · 문자를 계속 받아요. 등록권 1장(' + won(ST.price_reg) + ')이 필요해요.</p>' +
+      ST.other_cars.map(function(o){ return '<button class="bk-btn ghost sm" type="button" data-move="' + o.id + '">' + BK.esc(BK.plateNice(o.plate)) + ' — 바로카로 옮기기</button>'; }).join('') +
+      '</section>' : '';
+    $('others').querySelectorAll('[data-move]').forEach(function(b){
+      b.onclick = function(){ startReg({ move: b.getAttribute('data-move') }); };
+    });
+  }
+
+  /* ── 등록 ── */
+  $('addBtn').onclick = function(){ startReg({}); };
+  function startReg(pre){
+    if (pre.move) return payOr({ kind: 'reg', move: pre.move });
+    var s = BK.sheet(
+      '<h3>내 차 등록하기</h3>' +
+      '<label class="bk-lbl">차 번호</label><label class="bk-plate small"><span class="band"></span><input id="rPlate" maxlength="14" placeholder="12가 3456"></label>' +
+      '<div class="bk-row"><div><label class="bk-lbl" for="rMake">차종 (선택)</label><input class="bk-in" id="rMake" maxlength="20" placeholder="예) 아반떼"></div>' +
+      '<div><label class="bk-lbl" for="rColor">색 (선택)</label><input class="bk-in" id="rColor" maxlength="10" placeholder="예) 흰색"></div></div>' +
+      '<label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.5"><input type="checkbox" id="rOk" style="width:22px;height:22px;flex:none;margin-top:1px">' +
+      '<span>제 차(또는 제가 쓰는 차)가 맞고, <a href="terms.html" target="_blank">이용약관</a>과 <a href="privacy.html" target="_blank">개인정보처리방침</a>에 동의합니다.</span></label>' +
+      '<div class="bk-msg" id="rMsg"></div>' +
+      '<button class="bk-btn blue" id="rGo" type="button">' + (ST.reg_credits ? '등록권으로 등록하기' : won(ST.price_reg) + ' 결제하고 등록하기') + '</button>' +
+      '<p class="bk-sub" style="text-align:center">월 요금 없음 · 차를 팔거나 폐차하면 무료로 지울 수 있어요</p>');
+    var pi = s.el.querySelector('#rPlate'); setTimeout(function(){ pi.focus(); }, 50);
+    pi.addEventListener('blur', function(){ if (BK.plateOk(pi.value)) pi.value = BK.plateNice(pi.value); });
+    s.el.querySelector('#rGo').onclick = function(){
+      var m = s.el.querySelector('#rMsg');
+      var plate = pi.value.trim();
+      if (!BK.plateOk(plate)) { m.className = 'bk-msg on bad'; m.textContent = ERR.bad_plate; return; }
+      if (!s.el.querySelector('#rOk').checked) { m.className = 'bk-msg on bad'; m.textContent = '확인란에 체크해 주세요.'; return; }
+      s.close();
+      payOr({ kind: 'reg', plate: BK.plateNice(plate), make: s.el.querySelector('#rMake').value.trim(), color: s.el.querySelector('#rColor').value.trim() });
+    };
+  }
+
+  /* 권이 있으면 바로, 없으면 결제 */
+  async function payOr(job){
+    var have = job.kind === 'reg' ? ST.reg_credits : ST.change_credits;
+    if (have) return finish(job);
+    pendSet(job);
+    var sku = job.kind === 'reg' ? 'baroka_reg' : 'baroka_change';
+    if (window.ACStore && ACStore.inApp()) {
+      ACStore.onDone = async function(r){
+        if (r.ok) { await load(); }
+        else if (!r.canceled) say('결제를 마치지 못했어요. ' + (r.error || ''), 'bad');
+        else pendSet(null);
+      };
+      ACStore.buy(sku, {});
+      return;
+    }
+    var ok = await ACWeb.inicis(BK.sb, sku, { plate: job.plate || '', reg: job.reg || job.move || '' }, { buyername: ST.nickname || '회원' });
+    if (!ok) pendSet(null);
+  }
+
+  /* 결제 뒤 · 권으로 마무리 */
+  async function finish(job){
+    hush();
+    try {
+      if (job.kind === 'reg') {
+        var regId = job.move;
+        if (!regId) {
+          var c = await BK.sb.rpc('create_registration_full', {
+            p_category: 'vehicle', p_country_code: 'KR', p_title: (ST.nickname || '') + '님의 차', p_description: null,
+            p_search_key: job.plate, p_guest_password: null,
+            p_detail: { plate_number: job.plate, make: job.make || null, color: job.color || null } });
+          if (c.error) throw c.error;
+          regId = c.data && c.data.id;
+        }
+        var r = await BK.sb.rpc('baroka_claim', { p_reg: regId });
+        if (r.error || !r.data.ok) {
+          if (!job.move && regId) { try { await BK.sb.from('registrations').delete().eq('id', regId); } catch (e) {} }
+          throw new Error(ERR[r.data && r.data.error] || (r.error && r.error.message) || '등록하지 못했어요');
+        }
+        pendSet(null);
+        await load();
+        say('✅ 등록되었어요! 이제 이 번호로 연락을 받을 수 있어요.\n주차 안내판을 뽑아 앞유리에 두면 더 좋아요.', 'ok');
+      } else {
+        var x = await BK.sb.rpc('baroka_change_plate', { p_reg: job.reg, p_plate: job.plate });
+        if (x.error || !x.data.ok) throw new Error(ERR[x.data && x.data.error] || (x.error && x.error.message) || '바꾸지 못했어요');
+        pendSet(null);
+        await load();
+        say('✅ 번호를 ' + job.plate + ' 로 바꿨어요. 주차 안내판의 QR은 그대로 쓰시면 됩니다.', 'ok');
+      }
+    } catch (e) {
+      console.error(e); say(String(e.message || e), 'bad');
+    }
+  }
+
+  /* 결제하고 돌아왔을 때 이어서 */
+  async function resume(){
+    var q = new URLSearchParams(location.search);
+    if (q.get('webpaid') === '0') { say('결제를 마치지 못했어요. ' + (q.get('msg') || ''), 'bad'); pendSet(null); }
+    if (q.has('webpaid') || q.has('new')) history.replaceState(null, '', 'my.html');
+    var job = pendGet();
+    if (job) {
+      var have = job.kind === 'reg' ? ST.reg_credits : ST.change_credits;
+      if (have) { await finish(job); return; }
+      if (q.get('webpaid') === '1') say('결제는 되었어요. 확인 중이니 잠시 뒤 이 화면을 다시 열어 주세요.');
+    }
+    if (q.has('new') && !ST.cars.length) startReg({});
+  }
+
+  /* ── 차 한 대에 할 일 ── */
+  function doPrint(car){ ParkingPlate.print({ token: car.token }); }
+  function doQr(car){
+    var link = BK.SITE + '/connect.html?t=' + car.token;
+    var s = BK.sheet('<h3>' + BK.esc(BK.plateNice(car.plate)) + ' 의 QR</h3><p class="bk-sub">이 QR을 찍으면 번호 없이 저에게 연락이 와요. 스티커로 뽑아 붙이셔도 됩니다.</p>' +
+      '<div id="qrBox" style="align-self:center;background:#fff;padding:12px;border-radius:12px"></div>' +
+      '<div class="bk-row"><button class="bk-btn ghost sm" id="qCopy" type="button">링크 복사</button><button class="bk-btn sm" id="qSave" type="button">그림 저장</button></div>');
+    new QRCode(s.el.querySelector('#qrBox'), { text: link, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+    s.el.querySelector('#qCopy').onclick = async function(){ try { await navigator.clipboard.writeText(link); BK.toast('복사했어요'); } catch (e) { prompt('복사해 주세요', link); } };
+    s.el.querySelector('#qSave').onclick = function(){
+      var c = s.el.querySelector('#qrBox canvas'); if (!c) return;
+      var a = document.createElement('a'); a.href = c.toDataURL('image/png'); a.download = 'baroka_qr_' + BK.plateKey(car.plate) + '.png'; a.click();
+    };
+  }
+  function doChange(car){
+    var s = BK.sheet('<h3>번호판을 바꾸셨나요?</h3>' +
+      '<p class="bk-sub">새 번호로 바꾸면 그 번호로 연락을 받아요. 주차 안내판의 QR은 그대로 쓰시면 돼요.<br>번호 변경 ' + won(ST.price_change) + (ST.change_credits ? ' — 변경권이 있어 결제 없이 바뀝니다.' : '') + '</p>' +
+      '<label class="bk-lbl">지금 번호</label><div class="bk-plate small"><span class="band"></span><input readonly value="' + BK.esc(BK.plateNice(car.plate)) + '"></div>' +
+      '<label class="bk-lbl">새 번호</label><label class="bk-plate small"><span class="band"></span><input id="cPlate" maxlength="14" placeholder="123가 4567"></label>' +
+      '<div class="bk-msg" id="cMsg"></div>' +
+      '<button class="bk-btn blue" id="cGo" type="button">' + (ST.change_credits ? '변경권으로 바꾸기' : won(ST.price_change) + ' 결제하고 바꾸기') + '</button>' +
+      '<p class="bk-sub" style="text-align:center">차를 팔았거나 다른 차로 바꿨다면 [🗑 차를 팔았어요] 후 새 차를 등록해 주세요.</p>');
+    var pi = s.el.querySelector('#cPlate'); setTimeout(function(){ pi.focus(); }, 50);
+    s.el.querySelector('#cGo').onclick = function(){
+      var m = s.el.querySelector('#cMsg');
+      if (!BK.plateOk(pi.value)) { m.className = 'bk-msg on bad'; m.textContent = ERR.bad_plate; return; }
+      if (BK.plateKey(pi.value) === BK.plateKey(car.plate)) { m.className = 'bk-msg on bad'; m.textContent = ERR.same; return; }
+      s.close();
+      payOr({ kind: 'change', reg: car.id, plate: BK.plateNice(pi.value) });
+    };
+  }
+  function doRemove(car){
+    var s = BK.sheet('<h3>' + BK.esc(BK.plateNice(car.plate)) + ' 를 지울까요?</h3>' +
+      '<p class="bk-sub">지우면 이 번호 · QR로 더 이상 연락이 오지 않아요. 되돌릴 수 없고, 다시 쓰려면 새로 등록(' + won(ST.price_reg) + ')해야 해요.</p>' +
+      '<div class="bk-acts" id="why">' +
+        ['차를 팔았어요', '폐차 · 말소했어요', '다른 차로 바꿨어요', '그냥 그만 쓸래요'].map(function(w){ return '<button type="button" data-w="' + w + '">' + w + '</button>'; }).join('') +
+      '</div><button class="bk-btn ghost" type="button" id="rmNo">취소</button>');
+    s.el.querySelector('#rmNo').onclick = s.close;
+    s.el.querySelectorAll('[data-w]').forEach(function(b){
+      b.onclick = async function(){
+        b.disabled = true;
+        var r = await BK.sb.rpc('baroka_remove', { p_reg: car.id, p_reason: b.getAttribute('data-w') });
+        s.close();
+        if (r.error || !r.data.ok) { say('지우지 못했어요. ' + ((r.error && r.error.message) || ERR[r.data && r.data.error] || ''), 'bad'); return; }
+        await load(); say('지웠어요. 그동안 바로카를 써 주셔서 고맙습니다.', 'ok');
+      };
+    });
+  }
+
+  BK.ads(Array.prototype.slice.call(document.querySelectorAll('.bk-ads')));
+  load();
+})();
+</script>
+</body>
+</html>

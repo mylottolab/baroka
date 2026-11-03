@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리 · 바로카</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="baroka.css?v=20261103">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+  .bk-main{max-width:760px}
+  .st{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .st div{background:var(--bk-bg);border-radius:12px;padding:12px;text-align:center;font-size:12.5px;color:var(--bk-sub)}
+  .st b{display:block;font-size:24px;color:var(--bk-ink)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  td,th{border-bottom:1px solid var(--bk-line);padding:8px 6px;text-align:left;vertical-align:top}
+  th{font-size:12px;color:var(--bk-sub)}
+  .f{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .f .w{grid-column:1/-1}
+  .f input,.f textarea{width:100%;border:2px solid var(--bk-line);border-radius:10px;padding:9px 10px;font:inherit;font-size:14.5px;background:var(--bk-card);color:var(--bk-ink)}
+  .f label{font-size:12.5px;font-weight:800;color:var(--bk-sub)}
+  .mini{height:34px;padding:0 10px;border-radius:9px;border:2px solid var(--bk-line);background:var(--bk-card);font-weight:800;cursor:pointer;color:var(--bk-ink)}
+</style>
+</head>
+<body>
+<div class="bk-shell"><main class="bk-main">
+  <header class="bk-top"><a class="bk-back" href="index.html">‹</a><h1 class="bk-h1">바로카 관리</h1></header>
+  <div class="bk-msg" id="msg"></div>
+
+  <section class="bk-card bk-hide" id="login">
+    <h2>관리자 로그인</h2>
+    <input class="bk-in" id="nick" placeholder="닉네임"><input class="bk-in" id="pw" type="password" placeholder="비밀번호">
+    <button class="bk-btn blue" id="go">로그인</button>
+  </section>
+
+  <div id="body" class="bk-hide" style="display:flex;flex-direction:column;gap:14px">
+    <section class="bk-card"><h2>현황</h2><div class="st" id="st"></div></section>
+
+    <section class="bk-card">
+      <h2>타일 광고</h2>
+      <p class="bk-sub">그림은 정사각형에 가까운 것(가로 600px 안팎)이 가장 보기 좋습니다. 그림이 없으면 바탕색 위에 글자 타일로 나옵니다.</p>
+      <table><thead><tr><th>광고</th><th>기간</th><th>보기 / 누름</th><th></th></tr></thead><tbody id="ads"></tbody></table>
+      <div class="f" id="form">
+        <input type="hidden" id="aId">
+        <div><label>제목(크게)</label><input id="aTitle" maxlength="30" placeholder="예) 세차 20% 할인"></div>
+        <div><label>한 줄 설명</label><input id="aSub" maxlength="40" placeholder="예) 강남역 ○○세차"></div>
+        <div class="w"><label>누르면 갈 주소</label><input id="aLink" placeholder="https://"></div>
+        <div><label>그림</label><input id="aFile" type="file" accept="image/*"></div>
+        <div><label>또는 그림 주소</label><input id="aImg" placeholder="https://…"></div>
+        <div><label>바탕색(그림 없을 때)</label><input id="aBg" type="color" value="#FFFFFF" style="height:42px;padding:3px"></div>
+        <div><label>순서(작을수록 앞)</label><input id="aSort" type="number" value="0"></div>
+        <div><label>시작(비우면 바로)</label><input id="aFrom" type="date"></div>
+        <div><label>끝(비우면 계속)</label><input id="aTo" type="date"></div>
+        <div><label>광고주(관리자만 봄)</label><input id="aWho"></div>
+        <div><label>메모(계약 · 금액)</label><input id="aMemo"></div>
+        <label class="w" style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="aOn" checked style="width:20px;height:20px"> 보이기</label>
+        <div class="w bk-row"><button class="bk-btn blue sm" id="aSave">저장</button><button class="bk-btn ghost sm" id="aNew">새로 쓰기</button></div>
+      </div>
+    </section>
+
+    <section class="bk-card">
+      <h2>등록권 · 번호변경권 드리기</h2>
+      <p class="bk-sub">시험 · 보상 · 홍보용. 받는 분의 닉네임을 넣습니다.</p>
+      <div class="f">
+        <div><label>닉네임</label><input id="gNick"></div>
+        <div><label>몇 장</label><input id="gN" type="number" value="1" min="1" max="20"></div>
+        <div class="w bk-row"><button class="bk-btn sm" id="gReg">등록권 드리기</button><button class="bk-btn ghost sm" id="gChg">번호변경권 드리기</button></div>
+      </div>
+    </section>
+
+    <section class="bk-card">
+      <h2>값</h2>
+      <p class="bk-sub">⚠ 앱스토어 · 플레이스토어 상품 값과 결제 서버 값도 같이 바꿔야 합니다. 화면 표시만 바뀝니다.</p>
+      <div class="f"><div><label>등록</label><input id="pReg" type="number"></div><div><label>번호 변경</label><input id="pChg" type="number"></div>
+      <div class="w"><button class="bk-btn ghost sm" id="pSave">값 저장</button></div></div>
+    </section>
+  </div>
+</main></div>
+
+<script src="baroka.js?v=20261103"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var ADS = [];
+  function say(t, k){ var m = $('msg'); m.className = 'bk-msg on ' + (k || 'info'); m.textContent = t; window.scrollTo(0, 0); }
+  function day(v){ return v ? String(v).slice(0, 10) : ''; }
+
+  async function load(){
+    var u = await BK.user();
+    $('login').classList.toggle('bk-hide', !!u);
+    if (!u) return;
+    var r = await BK.sb.rpc('baroka_admin_overview');
+    if (r.error || !r.data.ok) { say('관리자만 볼 수 있어요. ' + ((r.error && r.error.message) || ''), 'bad'); return; }
+    var d = r.data;
+    $('body').classList.remove('bk-hide');
+    $('st').innerHTML = [['등록된 차', d.cars], ['최근 7일', d.cars_7d], ['결제된 권', d.paid], ['번호 변경', d.changes], ['처분(지움)', d.removed], ['안 쓴 권', d.credits_unused]]
+      .map(function(x){ return '<div><b>' + x[1] + '</b>' + x[0] + '</div>'; }).join('');
+    $('pReg').value = d.price_reg; $('pChg').value = d.price_change;
+    ADS = d.ads || [];
+    $('ads').innerHTML = ADS.length ? ADS.map(function(a){
+      return '<tr><td><b>' + BK.esc(a.title) + '</b><br><small>' + BK.esc(a.sub) + (a.advertiser ? ' · ' + BK.esc(a.advertiser) : '') + '</small>' + (a.active ? '' : ' <span class="bk-tag y">숨김</span>') + '</td>' +
+        '<td><small>' + (day(a.starts_at) || '바로') + ' ~ ' + (day(a.ends_at) || '계속') + '</small></td>' +
+        '<td>' + a.views + ' / ' + a.clicks + '</td>' +
+        '<td><button class="mini" data-e="' + a.id + '">고치기</button> <button class="mini" data-d="' + a.id + '">지우기</button></td></tr>';
+    }).join('') : '<tr><td colspan="4">아직 광고가 없어요. 아래에서 올려 주세요.</td></tr>';
+    $('ads').querySelectorAll('[data-e]').forEach(function(b){ b.onclick = function(){ edit(ADS.find(function(a){ return a.id === b.getAttribute('data-e'); })); }; });
+    $('ads').querySelectorAll('[data-d]').forEach(function(b){ b.onclick = async function(){
+      if (!confirm('이 광고를 지울까요?')) return;
+      await BK.sb.rpc('baroka_admin_ad_delete', { p_id: b.getAttribute('data-d') }); load();
+    }; });
+  }
+  function edit(a){
+    a = a || {};
+    $('aId').value = a.id || ''; $('aTitle').value = a.title || ''; $('aSub').value = a.sub || ''; $('aLink').value = a.link_url || '';
+    $('aImg').value = a.image_url || ''; $('aBg').value = a.bg || '#FFFFFF'; $('aSort').value = a.sort || 0;
+    $('aFrom').value = day(a.starts_at); $('aTo').value = day(a.ends_at); $('aWho').value = a.advertiser || ''; $('aMemo').value = a.memo || '';
+    $('aOn').checked = a.active !== false; $('aFile').value = '';
+    $('form').scrollIntoView({ behavior: 'smooth' });
+  }
+  $('aNew').onclick = function(){ edit(null); };
+  $('aSave').onclick = async function(){
+    var b = this; b.disabled = true;
+    try {
+      var img = $('aImg').value.trim();
+      var f = $('aFile').files[0];
+      if (f) {
+        var path = Date.now() + '_' + Math.random().toString(36).slice(2, 7) + '.' + ((f.name.split('.').pop() || 'jpg').toLowerCase());
+        var up = await BK.sb.storage.from('baroka-ads').upload(path, f, { contentType: f.type, upsert: false });
+        if (up.error) throw up.error;
+        img = BK.sb.storage.from('baroka-ads').getPublicUrl(path).data.publicUrl;
+      }
+      var r = await BK.sb.rpc('baroka_admin_ad_save', { p: {
+        id: $('aId').value, title: $('aTitle').value.trim(), sub: $('aSub').value.trim(), link_url: $('aLink').value.trim(), image_url: img,
+        bg: $('aBg').value, sort: Number($('aSort').value || 0), active: $('aOn').checked,
+        starts_at: $('aFrom').value ? $('aFrom').value + 'T00:00:00+09:00' : '', ends_at: $('aTo').value ? $('aTo').value + 'T23:59:59+09:00' : '',
+        advertiser: $('aWho').value.trim(), memo: $('aMemo').value.trim() } });
+      if (r.error || !r.data.ok) throw new Error((r.error && r.error.message) || r.data.error);
+      edit(null); say('저장했어요.', 'ok'); load();
+    } catch (e) { say('저장하지 못했어요: ' + (e.message || e), 'bad'); }
+    finally { b.disabled = false; }
+  };
+  async function grant(kind){
+    var r = await BK.sb.rpc('baroka_admin_grant', { p_nickname: $('gNick').value.trim(), p_kind: kind, p_n: Number($('gN').value || 1) });
+    if (r.error || !r.data.ok) say('드리지 못했어요: ' + ((r.error && r.error.message) || (r.data.error === 'no_user' ? '그 닉네임이 없어요' : r.data.error)), 'bad');
+    else { say('드렸어요.', 'ok'); load(); }
+  }
+  $('gReg').onclick = function(){ grant('reg'); };
+  $('gChg').onclick = function(){ grant('change'); };
+  $('pSave').onclick = async function(){
+    var r = await BK.sb.rpc('baroka_admin_prices', { p_reg: Number($('pReg').value), p_change: Number($('pChg').value) });
+    say(r.error || !r.data.ok ? '저장하지 못했어요' : '저장했어요.', r.error ? 'bad' : 'ok');
+  };
+  $('go').onclick = async function(){
+    var r = await BK.login($('nick').value, $('pw').value);
+    if (!r.ok) say(r.error, 'bad'); else load();
+  };
+  load();
+})();
+</script>
+</body>
+</html>
