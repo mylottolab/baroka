@@ -102,7 +102,15 @@
     $('login').classList.toggle('bk-hide', !!u);
     if (!u) return;
     var r = await BK.sb.rpc('baroka_admin_overview');
-    if (r.error || !r.data.ok) { say('관리자만 볼 수 있어요. ' + ((r.error && r.error.message) || ''), 'bad'); return; }
+    if (r.error || !r.data.ok) {
+      /* 🔴 2026-11-04 — 관리자가 아닌 계정(예: 심사용 계정)으로 들어와 있으면 로그아웃하고 관리자 계정으로 다시 들어오게 */
+      var me = '';
+      try { me = decodeURIComponent(String(u.email || '').split('@')[0]); } catch (e) {}
+      say('지금 ' + (me || '이 계정') + '(으)로 로그인되어 있어요. 관리자만 볼 수 있어요.\n아래에서 관리자 계정으로 다시 로그인해 주세요.', 'bad');
+      await BK.logout();
+      $('login').classList.remove('bk-hide');
+      return;
+    }
     var d = r.data;
     $('body').classList.remove('bk-hide');
     $('st').innerHTML = [['등록된 차', d.cars], ['최근 7일', d.cars_7d], ['결제된 권', d.paid], ['번호 변경', d.changes], ['처분(지움)', d.removed], ['안 쓴 권', d.credits_unused]]
