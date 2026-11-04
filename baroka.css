@@ -8,13 +8,20 @@
   --bk-plate:#FFFFFF; --bk-plate-ink:#0B1220; --bk-plate-edge:#0B1220;
   --bk-shadow:0 2px 0 rgba(11,18,32,.08), 0 8px 24px rgba(11,18,32,.06);
 }
+/* 야간: 폰 설정을 따르되, [☀️/🌙]로 고르면 그것을 따릅니다(data-theme) */
 @media (prefers-color-scheme: dark){
-  :root{
+  :root:not([data-theme="light"]){
     --bk-bg:#0A0F1A; --bk-card:#141B29; --bk-ink:#EEF2F8; --bk-sub:#A3AEC2; --bk-line:#26314A;
     --bk-blue:#5B7BE0; --bk-blue-soft:#18264A; --bk-navy:#101B3D;
     --bk-shadow:0 2px 0 rgba(0,0,0,.3);
   }
 }
+:root[data-theme="dark"]{
+    --bk-bg:#0A0F1A; --bk-card:#141B29; --bk-ink:#EEF2F8; --bk-sub:#A3AEC2; --bk-line:#26314A;
+    --bk-blue:#5B7BE0; --bk-blue-soft:#18264A; --bk-navy:#101B3D;
+    --bk-shadow:0 2px 0 rgba(0,0,0,.3);
+  }
+
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bk-bg);color:var(--bk-ink);
   font-family:"Pretendard","Noto Sans KR",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
@@ -32,7 +39,8 @@ button{font:inherit}
 
 /* 위 막대 */
 .bk-top{display:flex;align-items:center;gap:10px;min-height:48px}
-.bk-logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--bk-ink);flex:1;min-width:0}
+.bk-logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--bk-ink);flex:1;min-width:0;white-space:nowrap}
+.bk-logo .mk{flex:none}
 .bk-logo .mk{display:flex;align-items:stretch;height:30px;border:2.5px solid var(--bk-plate-edge);border-radius:7px;overflow:hidden;background:var(--bk-plate)}
 .bk-logo .mk i{width:9px;background:var(--bk-blue)}
 .bk-logo .mk b{display:flex;align-items:center;padding:0 7px;font-size:15px;font-weight:900;color:var(--bk-plate-ink);letter-spacing:.5px}

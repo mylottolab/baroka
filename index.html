@@ -10,7 +10,8 @@
 <link rel="icon" href="baroka_icon_192.png">
 <link rel="apple-touch-icon" href="baroka_icon_192.png">
 <meta name="apple-mobile-web-app-title" content="바로카">
-<link rel="stylesheet" href="baroka.css?v=20261103b">
+<link rel="stylesheet" href="baroka.css?v=20261105">
+<script src="baroka_i18n.js?v=20261105"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
@@ -93,7 +94,7 @@
   function say(t, kind){ msg.className = 'bk-msg on ' + (kind || 'info'); msg.textContent = t; }
   function hush(){ msg.className = 'bk-msg'; }
 
-  if (window.ACScan) ACScan.init({ sb: BK.sb, url: BK.URL, lang: function(){ return 'ko'; } });
+  if (window.ACScan) ACScan.init({ sb: BK.sb, url: BK.URL, lang: function(){ return (BK.lang && BK.lang() === 'en') ? 'en' : 'ko'; } });
 
   async function find(q){
     hush(); res.innerHTML = '';

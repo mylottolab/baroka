@@ -16,7 +16,7 @@
   BK.CONTACT = 'weapps.kr@gmail.com';   // 광고 · 고객 문의 (에일리어스콜과 같은 창구)
   BK.sb = window.supabase.createClient(URL_, ANON);
   window.sb = window.sb || BK.sb;           // 에일리어스콜 도우미(스캔 · 결제)가 찾는 이름
-  try { localStorage.setItem('aliascall_lang', 'ko'); } catch (e) {}
+  // 언어는 baroka_i18n.js 가 정합니다(aliascall_lang 도 함께)
 
   BK.esc = function(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
   BK.isApp = function(){
