@@ -41,7 +41,9 @@
     try { var r = await BK.sb.auth.getSession(); return r.data.session ? r.data.session.user : null; } catch (e) { return null; }
   };
   BK.login = async function(nick, pw){
-    var r = await BK.sb.auth.signInWithPassword({ email: email(nick), password: pw });
+    // 🔴 2026-11-04 — 관리자처럼 이메일로 만든 계정은 이메일을 그대로 넣어도 들어오게
+    var em = String(nick || '').indexOf('@') > 0 ? String(nick).trim() : email(nick);
+    var r = await BK.sb.auth.signInWithPassword({ email: em, password: pw });
     if (r.error) return { ok: false, error: /invalid/i.test(r.error.message) ? '닉네임 또는 비밀번호가 맞지 않습니다.' : r.error.message };
     return { ok: true };
   };
