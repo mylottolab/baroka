@@ -58,6 +58,11 @@
 
   /* ── 한글 → 영어 (긴 것부터 바꿉니다) ── */
   var D = [
+    ['회원 탈퇴 (계정 지우기)', 'Delete account'], ['회원 탈퇴', 'Delete account'], ['탈퇴하기', 'Delete account'],
+    ['등록한 차, 차 갤러리 사진, 쓰지 않은 등록권 · 변경권이 모두 지워지고 되돌릴 수 없어요. 남은 등록권은 환불되지 않습니다.', 'Your cars, gallery photos and unused credits will be permanently deleted. Unused credits are not refunded.'],
+    ['확인을 위해', 'To confirm, type'], ['라고 적어 주세요', ''], ['라고 적어 주세요.', ''], ['탈퇴하지 못했어요:', "Couldn't delete:"],
+    ['탈퇴했습니다. 그동안 바로카를 써 주셔서 고맙습니다.', 'Your account has been deleted. Thank you for using Baroka.'],
+
     ['바로카 — 차 번호로 차주에게 바로 연락', 'Baroka — reach a car owner by plate number'],
     ['차 번호만 알면 차주에게 바로 전화 · 문자. 서로 전화번호는 보이지 않습니다. 내 차 등록 2,500원 한 번이면 끝.', 'Call or text a car owner with just the plate number. No phone numbers shared. Register your car once for ₩2,500.'],
     ['바로카 처음 화면', 'Baroka home'],

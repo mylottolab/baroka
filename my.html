@@ -58,6 +58,8 @@
         <input type="checkbox" id="lsOn" style="width:26px;height:26px">
       </label>
       <p class="bk-foot"><span id="who"></span><br>번호판을 바꾸면 번호 변경 <b id="pChg">2,500원</b> · 차를 팔거나 폐차하면 무료로 지울 수 있어요.</p>
+      <!-- 🔴 2026-11-05 — 회원 탈퇴(앱 스토어 · 플레이 필수: 앱 안에서 계정을 지울 수 있어야 함) -->
+      <button type="button" id="delAcc" style="align-self:center;background:none;border:none;color:var(--bk-sub,#888);font:inherit;font-size:13.5px;text-decoration:underline;cursor:pointer;padding:8px">회원 탈퇴 (계정 지우기)</button>
     </section>
   </main>
   <aside class="bk-rail"><div class="bk-ads" data-n="5"></div></aside>
@@ -101,6 +103,29 @@
   };
   $('pw').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('authGo').click(); });
   $('out').onclick = async function(){ await BK.logout(); location.reload(); };
+  /* 🔴 2026-11-05 — 회원 탈퇴: 에일리어스콜과 같은 탈퇴 기능(self-delete-account)을 씁니다. 차 · 갤러리 · 남은 등록권이 함께 지워집니다. */
+  $('delAcc').onclick = function(){
+    var EN = document.documentElement.lang === 'en', W = EN ? 'DELETE' : '탈퇴';
+    var sh = BK.sheet('<h2>회원 탈퇴</h2>' +
+      '<p class="bk-sub">등록한 차, 차 갤러리 사진, 쓰지 않은 등록권 · 변경권이 모두 지워지고 되돌릴 수 없어요. 남은 등록권은 환불되지 않습니다.</p>' +
+      '<label class="bk-lbl" for="dW">확인을 위해 <b>' + W + '</b> 라고 적어 주세요</label><input class="bk-in" id="dW" autocomplete="off">' +
+      '<div class="bk-msg" id="dMsg"></div>' +
+      '<button class="bk-btn" id="dGo" type="button" style="background:#D6336C;color:#fff">탈퇴하기</button><button class="bk-btn ghost" id="dNo" type="button">취소</button>');
+    sh.el.querySelector('#dNo').onclick = sh.close;
+    sh.el.querySelector('#dGo').onclick = async function(){
+      var m = sh.el.querySelector('#dMsg'), b = this;
+      if (sh.el.querySelector('#dW').value.trim().toUpperCase() !== W) { m.textContent = W + ' 라고 적어 주세요.'; m.className = 'bk-msg err'; m.style.display = 'block'; return; }
+      b.disabled = true;
+      try {
+        var s = (await BK.sb.auth.getSession()).data.session;
+        var r = await fetch(BK.URL + '/functions/v1/self-delete-account', { method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token }, body: JSON.stringify({ reason: 'baroka' }) });
+        var d = await r.json().catch(function(){ return {}; });
+        if (!r.ok) throw new Error(d.error || r.status);
+        await BK.logout(); alert('탈퇴했습니다. 그동안 바로카를 써 주셔서 고맙습니다.'); location.href = 'index.html';
+      } catch (e) { m.textContent = '탈퇴하지 못했어요: ' + e.message; m.className = 'bk-msg err'; m.style.display = 'block'; b.disabled = false; }
+    };
+  };
 
   /* ── 상태 ── */
   async function load(){
