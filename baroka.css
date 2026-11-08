@@ -78,7 +78,7 @@ button{font:inherit}
 .bk-plate.small input{font-size:22px}
 
 /* 단추 */
-.bk-btn{height:56px;border:none;border-radius:14px;background:var(--bk-ink);color:#fff;font-size:17px;font-weight:900;cursor:pointer;width:100%;
+.bk-btn{height:56px;border:none;border-radius:14px;background:var(--bk-ink);color:var(--bk-card);font-size:17px;font-weight:900;cursor:pointer;width:100%;
   display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;letter-spacing:-.2px}
 .bk-btn.yel{background:var(--bk-yel);color:var(--bk-yel-ink)}
 .bk-btn.blue{background:var(--bk-blue);color:#fff}
