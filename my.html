@@ -57,6 +57,8 @@
         <span style="flex:1"><b>앱을 열면 바로 번호판 카메라</b><br><span class="bk-sub">끄면 찾기 화면만 열려요</span></span>
         <input type="checkbox" id="lsOn" style="width:26px;height:26px">
       </label>
+      <!-- 🔴 2026-11-09 유치대리점: 추천 대리점 코드 넣기(가입 후 30일 안) -->
+      <section class="bk-card" id="prBox" style="display:none"></section>
       <p class="bk-foot"><span id="who"></span><br>번호판을 바꾸면 번호 변경 <b id="pChg">2,500원</b> · 차를 팔거나 폐차하면 무료로 지울 수 있어요.</p>
       <!-- 🔴 2026-11-05 — 회원 탈퇴(앱 스토어 · 플레이 필수: 앱 안에서 계정을 지울 수 있어야 함) -->
       <button type="button" id="delAcc" style="align-self:center;background:none;border:none;color:var(--bk-sub,#888);font:inherit;font-size:13.5px;text-decoration:underline;cursor:pointer;padding:8px">회원 탈퇴 (계정 지우기)</button>
@@ -69,6 +71,7 @@
 <script src="aliascall_web_pay.js"></script>
 <script src="aliascall_store.js"></script>
 <script src="aliascall_parking_plate.js?v=20261103"></script>
+<script src="baroka_partner_ref.js?v=20261109"></script>
 <script>
 (function(){
   var $ = function(id){ return document.getElementById(id); };
@@ -138,6 +141,7 @@
     if (r.error || !r.data || !r.data.ok) { say('불러오지 못했어요. ' + ((r.error && r.error.message) || ''), 'bad'); return; }
     ST = r.data;
     $('who').textContent = (ST.nickname || '') + ' 님으로 로그인됨';
+    try { if (window.PartnerRef) PartnerRef.mount($('prBox')); } catch (e) {}
     $('pReg').textContent = won(ST.price_reg); $('pChg').textContent = won(ST.price_change);
     $('addTtl').textContent = ST.cars.length ? '차 한 대 더 등록하기' : '내 차 등록하기';
     var notes = [];
