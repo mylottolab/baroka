@@ -83,7 +83,7 @@
     ['접촉 · 긁힘', 'Bump · scratch'], ['사진과 함께 차주에게 전달', 'Send it with a photo'],
     ['연락하는 분은 가입이 필요 없어요. 차주는 앱으로 바로 받고, 원할 때만 대답합니다.', 'No sign-up needed to contact. Owners get it in the app and reply only if they want.'],
     ['바로카 · 위브앱솔루션 ·', 'Baroka · WeaveApp Solution ·'],
-    ['개인정보처리방침', 'Privacy'], ['이용약관', 'Terms'], ['환불', 'Refunds'], ['광고 문의', 'Advertise'], ['카카오톡 문의', 'KakaoTalk support'],
+    ['개인정보처리방침', 'Privacy'], ['이용약관', 'Terms'], ['환불', 'Refunds'], ['광고 문의', 'Advertise'], ['카카오톡 문의', 'KakaoTalk support'], ['사용법 영상', 'How-to videos'], ['인스타', 'Instagram'], ['틱톡', 'TikTok'],
     ['차 번호를 넣어 주세요. 뒤 네 자리만 넣어도 찾아요.', 'Enter a plate number. The last 4 digits are enough.'],
     ['찾는 중…', 'Searching…'],
     ['이 번호로 등록된 차가 없어요.\n차주가 아직 바로카에 등록하지 않았을 수 있어요.', 'No car is registered with this number.\nThe owner may not use Baroka yet.'],
