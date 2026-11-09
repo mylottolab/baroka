@@ -51,7 +51,7 @@
     nick = String(nick || '').trim();
     if (nick.length < 2) return { ok: false, error: '닉네임을 두 글자 이상 넣어 주세요.' };
     if (String(pw || '').length < 6) return { ok: false, error: '비밀번호는 6자리 이상으로 해 주세요.' };
-    var r = await BK.sb.auth.signUp({ email: email(nick), password: pw });
+    var r = await BK.sb.auth.signUp({ email: email(nick), password: pw, options: { data: { app: 'baroka' } } });   // 🔴 2026-11-09 앱별 가입 통계
     if (r.error) {
       if (/already/i.test(r.error.message)) {
         var l = await BK.login(nick, pw);
