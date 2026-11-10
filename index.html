@@ -62,6 +62,12 @@
       <span style="font-weight:900;color:var(--bk-blue)">받기 ›</span>
     </a>
 
+    <a class="bk-card" id="asBox" href="https://apps.apple.com/kr/app/id6830146038" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:14px">
+      <span style="width:38px;height:38px;border-radius:10px;background:linear-gradient(160deg,#1fc8ff,#1a6dff);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:900;flex:none">A</span>
+      <span style="flex:1"><b style="font-size:17px">아이폰 앱 받기</b><br><span class="bk-sub">App Store에서 「바로카」 · 연락을 앱 알림으로 바로</span></span>
+      <span style="font-weight:900;color:var(--bk-blue)">받기 ›</span>
+    </a>
+
     <a class="bk-card" href="gallery.html" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:14px">
       <span style="font-size:34px">🚘</span>
       <span style="flex:1"><b style="font-size:17px">차 갤러리</b><br><span class="bk-sub">내 차 자랑 · 차와 함께한 풍경 · 관리 팁</span></span>
@@ -84,7 +90,7 @@
     <div class="bk-ads bk-ads-inline" data-n="2"></div>
 
     <footer class="bk-foot">
-      바로카 · 위브앱솔루션 · <a href="terms.html">이용약관</a> · <a href="privacy.html">개인정보처리방침</a> · <a href="refund.html">환불</a> · <a href="ad.html">광고 문의</a> · <a href="http://pf.kakao.com/_ZxexexeX/chat" target="_blank" rel="noopener">카카오톡 문의</a> · <a href="https://play.google.com/store/apps/details?id=com.weaveapp.baroka" target="_blank" rel="noopener">Google Play</a><br>📺 <a href="https://www.youtube.com/@weveapp" target="_blank" rel="noopener">사용법 영상</a> · <a href="https://www.instagram.com/weveapp_kr/" target="_blank" rel="noopener">인스타</a> · <a href="https://x.com/weveapp_kr" target="_blank" rel="noopener">X</a> · <a href="https://www.tiktok.com/@weveapp" target="_blank" rel="noopener">틱톡</a>
+      바로카 · 위브앱솔루션 · <a href="terms.html">이용약관</a> · <a href="privacy.html">개인정보처리방침</a> · <a href="refund.html">환불</a> · <a href="ad.html">광고 문의</a> · <a href="http://pf.kakao.com/_ZxexexeX/chat" target="_blank" rel="noopener">카카오톡 문의</a> · <a href="https://play.google.com/store/apps/details?id=com.weaveapp.baroka" target="_blank" rel="noopener">Google Play</a> · <a href="https://apps.apple.com/kr/app/id6830146038" target="_blank" rel="noopener">App Store</a><br>📺 <a href="https://www.youtube.com/@weveapp" target="_blank" rel="noopener">사용법 영상</a> · <a href="https://www.instagram.com/weveapp_kr/" target="_blank" rel="noopener">인스타</a> · <a href="https://x.com/weveapp_kr" target="_blank" rel="noopener">X</a> · <a href="https://www.tiktok.com/@weveapp" target="_blank" rel="noopener">틱톡</a>
     </footer>
   </main>
 
@@ -95,7 +101,7 @@
 <script src="aliascall_scan.js?v=20261102"></script>
 <script src="baroka_partner_ref.js?v=20261109"></script>
 <script>
-try { if (BK.isApp()) document.getElementById('gpBox').hidden = true; } catch (e) {}
+try { if (BK.isApp()) { document.getElementById('gpBox').hidden = true; document.getElementById('asBox').hidden = true; } } catch (e) {}
 
 (function(){
   var $ = function(id){ return document.getElementById(id); };
