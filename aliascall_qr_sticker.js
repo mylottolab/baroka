@@ -38,10 +38,12 @@
     var area = document.getElementById('stArea');
     if (!area) { area = document.createElement('div'); area.id = 'stArea'; document.body.appendChild(area); }
     area.innerHTML = '<div class="g">' + new Array(5).join('<img src="' + url + '">') + '</div><p>6 × 6cm 스티커 4장입니다. 점선을 따라 잘라 차 앞유리 안쪽에 붙이세요.<br>※ 투명 보호필름(6.5 × 6.5cm, 쿠팡에서 「표준형6.0x6.0cm」 검색)을 덧붙이면 비에 젖지 않고 유리창에 붙이기 쉽습니다.</p>';
+    /* 🔴 2026-11-12 — 휴대폰 브라우저(삼성 인터넷 · 크롬)는 인쇄 미리보기를 만들기 전에 afterprint 가 먼저 와서
+       표시를 지우면 빈 PDF 가 나왔습니다. 이제는 인쇄 화면에서 돌아와 화면을 다시 누를 때만 지웁니다(@media print 에서만 쓰여 화면엔 영향 없음). */
+    document.body.classList.remove('pl-printing');
     document.body.classList.add('st-printing');
-    var done = function(){ document.body.classList.remove('st-printing'); window.removeEventListener('afterprint', done); };
-    window.addEventListener('afterprint', done);
-    setTimeout(function(){ document.addEventListener('pointerdown', done, { once: true }); }, 1500);
+    var done = function(){ document.body.classList.remove('st-printing'); };
+    setTimeout(function(){ document.addEventListener('pointerdown', done, { once: true }); }, 4000);
     setTimeout(function(){
       try { window.ACTheme && ACTheme.printLight && ACTheme.printLight(); } catch (e) {}
       if (window.AliasNative && typeof AliasNative.printPage === 'function') AliasNative.printPage('Aliascall QR sticker');
