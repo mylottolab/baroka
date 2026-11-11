@@ -24,7 +24,7 @@
     '@media print{body.pl-printing>*:not(#plArea){display:none!important}body.pl-printing #plArea{display:block!important}body.pl-printing{background:#fff!important;margin:0!important;padding:0!important}}',
     '#plArea *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}',
     '#plArea{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;color:#0B1220;word-break:keep-all}',
-    '.pl-page{width:210mm;height:297mm;position:relative;background:#fff;overflow:hidden}',
+    '.pl-page{width:210mm;height:290mm;position:relative;background:#fff;overflow:hidden;page-break-after:avoid;break-after:avoid}',
     '.pl-guide{position:absolute;left:10mm;right:10mm;font-size:8.5pt;color:#55615F;text-align:center;font-weight:600}',
     /* 접는 판: 190 × 88mm 두 면 */
     '.pl-tent{position:absolute;left:10mm;top:12mm;width:190mm;height:176mm;border:.3mm dashed #999}',
@@ -83,7 +83,7 @@
       b:'<b>바로카</b> · 내 차도 등록하기 baroka.kr', scan:'📷 카메라로 찍어 주세요',
       bk:'바로카', bh:'제 전화번호는 안전하게 숨겨져 있어요', bd:'연락은 QR로 받습니다. 낯선 사람에게 번호가 퍼지지 않아요.<br>내 차도 등록하기 · baroka.kr',
       slot:'QR 스티커를<br>여기에 붙이세요', g1:'✂ 점선을 따라 자르고 가운데 선을 접어 대시보드에 세우세요 (파란 띠가 있는 면이 바깥 · 앞유리에 바짝)',
-      g2:'✂ 또는 이 납작한 판을 대시보드에 눕혀 두세요', g3:'두꺼운 종이에 찍고, 코팅은 반사가 적은 무광으로 하면 QR이 더 잘 찍힙니다. QR 스티커는 투명 보호필름(6.5 × 6.5cm, 쿠팡에서 「표준형6.0x6.0cm」 검색)을 덧붙이면 좋습니다.'
+      g2:'✂ 또는 이 납작한 판을 대시보드에 눕혀 두세요', g3:'두꺼운 종이 · 무광 코팅을 권합니다. 투명 보호필름: 쿠팡에서 「표준형6.0x6.0cm」 검색'
     };
   }
   var ST = false;
@@ -102,7 +102,7 @@
       '<div class="pl-fold"></div><div class="pl-face">' + front(t, q) + '</div></div>' +
       '<div class="pl-guide" style="top:193mm">' + t.g2 + '</div>' +
       '<div class="pl-flat">' + front(t, q, true) + '</div>' +
-      '<div class="pl-guide" style="top:286mm">' + t.g3 + '</div>' +
+      '<div class="pl-guide" style="top:284mm">' + t.g3 + '</div>' +
     '</div>';
   }
   function print(o){
