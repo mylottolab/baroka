@@ -37,7 +37,7 @@
       document.head.appendChild(st); }
     var area = document.getElementById('stArea');
     if (!area) { area = document.createElement('div'); area.id = 'stArea'; document.body.appendChild(area); }
-    area.innerHTML = '<div class="g">' + new Array(5).join('<img src="' + url + '">') + '</div><p>6 × 6cm 스티커 4장입니다. 점선을 따라 잘라 차 앞유리 안쪽에 붙이세요.<br>※ 투명 보호필름(6.5 × 6.5cm, 별도 판매)을 덧붙이면 비에 젖지 않고 유리창에 붙이기 쉽습니다.</p>';
+    area.innerHTML = '<div class="g">' + new Array(5).join('<img src="' + url + '">') + '</div><p>6 × 6cm 스티커 4장입니다. 점선을 따라 잘라 차 앞유리 안쪽에 붙이세요.<br>※ 투명 보호필름(6.5 × 6.5cm, 별도 판매 · smartstore.naver.com/lottoslip)을 덧붙이면 비에 젖지 않고 유리창에 붙이기 쉽습니다.</p>';
     document.body.classList.add('st-printing');
     var done = function(){ document.body.classList.remove('st-printing'); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);

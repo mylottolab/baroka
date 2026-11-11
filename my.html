@@ -70,8 +70,8 @@
 <script src="baroka.js?v=20261109"></script>
 <script src="aliascall_web_pay.js"></script>
 <script src="aliascall_store.js"></script>
-<script src="aliascall_parking_plate.js?v=20261111"></script>
-<script src="aliascall_qr_sticker.js?v=20261111"></script>
+<script src="aliascall_parking_plate.js?v=20261112"></script>
+<script src="aliascall_qr_sticker.js?v=20261112"></script>
 <script src="baroka_partner_ref.js?v=20261109"></script>
 <script>
 (function(){
@@ -282,7 +282,8 @@
     var link = BK.SITE + '/connect.html?t=' + car.token;
     var s = BK.sheet('<h3>' + BK.esc(BK.plateNice(car.plate)) + ' 의 QR 스티커</h3><p class="bk-sub">이 QR을 찍으면 번호 없이 저에게 연락이 와요. 그대로 뽑아 차에 붙이세요.</p>' +
       '<img id="qrSt" alt="QR 스티커" style="align-self:center;width:100%;max-width:300px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.15)">' +
-      '<div class="bk-row"><button class="bk-btn ghost sm" id="qCopy" type="button">링크 복사</button><button class="bk-btn ghost sm" id="qSave" type="button">스티커 저장</button><button class="bk-btn sm" id="qPrint" type="button">🖨 인쇄</button></div>');
+      '<div class="bk-row"><button class="bk-btn ghost sm" id="qCopy" type="button">링크 복사</button><button class="bk-btn ghost sm" id="qSave" type="button">스티커 저장</button><button class="bk-btn sm" id="qPrint" type="button">🖨 인쇄</button></div>' +
+      '<a href="https://smartstore.naver.com/lottoslip/products/13311594716" target="_blank" rel="noopener" class="bk-sub" style="text-align:center;display:block;font-weight:700">🛡 투명 보호필름(6.5 × 6.5cm) 사기 — 붙이면 방수 · 붙이기 쉬움 ›</a>');
     var url = qrSticker(link);
     if (url) s.el.querySelector('#qrSt').src = url;
     s.el.querySelector('#qCopy').onclick = async function(){ try { await navigator.clipboard.writeText(link); BK.toast('복사했어요'); } catch (e) { prompt('복사해 주세요', link); } };
@@ -327,7 +328,7 @@
       document.head.appendChild(st); }
     var area = document.getElementById('stArea');
     if (!area) { area = document.createElement('div'); area.id = 'stArea'; document.body.appendChild(area); }
-    area.innerHTML = '<div class="g">' + new Array(5).join('<img src="' + url + '">') + '</div><p>6 × 6cm 스티커 4장입니다. 점선을 따라 잘라 차 앞유리 안쪽에 붙이세요.<br>※ 투명 보호필름(6.5 × 6.5cm, 별도 판매)을 덧붙이면 비에 젖지 않고 유리창에 붙이기 쉽습니다.</p>';
+    area.innerHTML = '<div class="g">' + new Array(5).join('<img src="' + url + '">') + '</div><p>6 × 6cm 스티커 4장입니다. 점선을 따라 잘라 차 앞유리 안쪽에 붙이세요.<br>※ 투명 보호필름(6.5 × 6.5cm, 별도 판매 · smartstore.naver.com/lottoslip)을 덧붙이면 비에 젖지 않고 유리창에 붙이기 쉽습니다.</p>';
     document.body.classList.add('st-printing');
     var done = function(){ document.body.classList.remove('st-printing'); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);
