@@ -62,32 +62,37 @@
     '.pl-flat .pl-qr{width:62mm;padding:3mm 3mm 2mm 0}',
     '.pl-flat .pl-qr .qw{padding:2.5mm}',
     '.pl-flat .pl-qr img, .pl-flat .pl-slot{width:52mm;height:52mm}',
+    '.pl-qr.st{width:84mm;padding:3mm 3mm 3mm 1mm}',
+    '.pl-qr.st img{width:80mm;height:80mm;image-rendering:auto}',
+    '.pl-flat .pl-qr.st{width:76mm;padding:3mm 3mm 3mm 0}',
+    '.pl-flat .pl-qr.st img{width:72mm;height:72mm}',
     '.pl-flat .pl-qr .t{font-size:9.5pt}'
   ].join('\n');
 
   function texts(){
     return en() ? {
       band:'PARKING', h:'Need me to<br><em>move my car?</em>', s:'Scan the QR to reach the owner — no number, no app.',
-      fq:'QR not scanning?', fa:'Go to <u>baroka.kr</u><br>and enter this car number.', tip:'Glare? Hold your phone close to the glass, slightly tilted.',
+      fq:'QR not scanning?', fa:'Install <u>Garimcall</u> and search this car number<br>or enter it at <u>garimcall.com</u>', tip:'Glare? Hold your phone close to the glass, slightly tilted.',
       b:'<b>Baroka</b> · baroka.kr', scan:'📷 Scan with your camera',
       bk:'BAROKA', bh:'My number stays private', bd:'Calls and messages come through the QR.<br>baroka.kr',
       slot:'Stick your<br>QR sticker here', g1:'✂ Cut along the dashed line, fold in the middle and stand it on the dashboard (front faces out)',
       g2:'✂ Or lay this flat card on the dashboard', g3:'Tip: thick paper and a matte (non-glossy) lamination keep the QR easy to scan.'
     } : {
       band:'주차 알림', h:'차를 빼 드릴까요?<br><em>QR을 찍어 주세요</em>', s:'번호 없이 차주에게 바로 연락 · 앱 필요 없음',
-      fq:'QR로 인식이 안 되면?', fa:'<u>baroka.kr</u>에서<br>차 번호를 넣어 보세요.', tip:'빛이 반사되면 폰을 유리에 가까이 대고 살짝 비스듬히 찍어 보세요.',
+      fq:'QR로 인식이 안 되면?', fa:'앱스토어에서 <u>가림콜</u> 설치 후 차량번호로 검색<br>또는 <u>garimcall.com</u>에서 차번호 입력', tip:'빛이 반사되면 폰을 유리에 가까이 대고 살짝 비스듬히 찍어 보세요.',
       b:'<b>바로카</b> · 내 차도 등록하기 baroka.kr', scan:'📷 카메라로 찍어 주세요',
       bk:'바로카', bh:'제 전화번호는 안전하게 숨겨져 있어요', bd:'연락은 QR로 받습니다. 낯선 사람에게 번호가 퍼지지 않아요.<br>내 차도 등록하기 · baroka.kr',
       slot:'QR 스티커를<br>여기에 붙이세요', g1:'✂ 점선을 따라 자르고 가운데 선을 접어 대시보드에 세우세요 (파란 띠가 있는 면이 바깥 · 앞유리에 바짝)',
-      g2:'✂ 또는 이 납작한 판을 대시보드에 눕혀 두세요', g3:'두꺼운 종이에 찍고, 코팅은 반사가 적은 무광으로 하면 QR이 더 잘 찍힙니다.'
+      g2:'✂ 또는 이 납작한 판을 대시보드에 눕혀 두세요', g3:'두꺼운 종이에 찍고, 코팅은 반사가 적은 무광으로 하면 QR이 더 잘 찍힙니다. QR 스티커는 투명 보호필름(6.5 × 6.5cm, 별도 판매)을 덧붙이면 좋습니다.'
     };
   }
+  var ST = false;
   function front(t, q, flat){
     return '<div class="pl-band">' + t.band + '</div>' +
       '<div class="pl-txt"><div><div class="pl-h">' + t.h + '</div><div class="pl-s">' + t.s + '</div>' +
         '<div class="pl-fb"><div class="q">' + t.fq + '</div><div class="a">' + t.fa + '</div><div class="tip">' + t.tip + '</div></div></div>' +
         '<div class="pl-b">' + t.b + '</div></div>' +
-      '<div class="pl-qr">' + (q ? '<div class="qw"><img src="' + q + '" alt=""></div>' : '<div class="pl-slot">' + t.slot + '<br>(' + (flat ? '4.5 × 4.5' : '6 × 6') + 'cm)</div>') + '<div class="t">' + t.scan + '</div></div>';
+      (ST ? '<div class="pl-qr st"><img src="' + q + '" alt=""></div>' : '<div class="pl-qr">' + (q ? '<div class="qw"><img src="' + q + '" alt=""></div>' : '<div class="pl-slot">' + t.slot + '<br>(' + (flat ? '4.5 × 4.5' : '6 × 6') + 'cm)</div>') + '<div class="t">' + t.scan + '</div></div>');
   }
   function page(q){
     var t = texts();
@@ -103,7 +108,10 @@
   function print(o){
     o = o || {};
     if (!o.blank && typeof QRCode === 'undefined') { alert(en() ? 'Could not make the QR. Please try again.' : 'QR을 만들지 못했습니다. 잠시 뒤 다시 눌러 주세요.'); return; }
-    var q = o.blank ? '' : qr(CONNECT + o.token, 700);
+    /* 🔴 2026-11-11 — 차량 QR 은 「통화를 원하시면 QR코드를 스캔하세요」 스티커 그림으로(QRSticker 가 있을 때) */
+    ST = !o.blank && !!(window.QRSticker && QRSticker.make);
+    var q = o.blank ? '' : (ST ? QRSticker.make(CONNECT + o.token) : qr(CONNECT + o.token, 700));
+    if (ST && !q) { ST = false; q = qr(CONNECT + o.token, 700); }
     var st = document.getElementById('plCss');
     if (!st) { st = document.createElement('style'); st.id = 'plCss'; st.textContent = CSS; document.head.appendChild(st); }
     var area = document.getElementById('plArea');

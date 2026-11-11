@@ -70,7 +70,8 @@
 <script src="baroka.js?v=20261109"></script>
 <script src="aliascall_web_pay.js"></script>
 <script src="aliascall_store.js"></script>
-<script src="aliascall_parking_plate.js?v=20261103"></script>
+<script src="aliascall_parking_plate.js?v=20261111"></script>
+<script src="aliascall_qr_sticker.js?v=20261111"></script>
 <script src="baroka_partner_ref.js?v=20261109"></script>
 <script>
 (function(){
@@ -162,8 +163,8 @@
         '<div class="meta">' + (meta ? BK.esc(meta) + ' · ' : '') + new Date(c.created_at).toLocaleDateString('ko-KR') + ' 등록' + (c.changes ? ' · 번호 변경 ' + c.changes + '번' : '') + '</div>' +
         (c.dup ? '<div class="bk-msg bad on" style="font-size:13px">같은 번호로 등록한 분이 또 있어요. 차를 산 분이라면 그대로 쓰셔도 되고, 이상하면 문의해 주세요.</div>' : '') +
         '<div class="bk-acts">' +
-          '<button type="button" data-a="print">🖨 주차 안내판</button>' +
-          '<button type="button" data-a="qr">▦ 내 QR</button>' +
+          '<button type="button" data-a="print">🔺 대시보드 알림판</button>' +
+          '<button type="button" data-a="qr">🏷 QR 스티커</button>' +
           '<button type="button" data-a="change">🔁 번호 바꿨어요</button>' +
           '<button type="button" data-a="remove">🗑 차를 팔았어요</button>' +
         '</div></div>';
@@ -326,7 +327,7 @@
       document.head.appendChild(st); }
     var area = document.getElementById('stArea');
     if (!area) { area = document.createElement('div'); area.id = 'stArea'; document.body.appendChild(area); }
-    area.innerHTML = '<div class="g">' + new Array(5).join('<img src="' + url + '">') + '</div><p>6 × 6cm 스티커 4장입니다. 점선을 따라 잘라 차 앞유리 안쪽에 붙이세요.</p>';
+    area.innerHTML = '<div class="g">' + new Array(5).join('<img src="' + url + '">') + '</div><p>6 × 6cm 스티커 4장입니다. 점선을 따라 잘라 차 앞유리 안쪽에 붙이세요.<br>※ 투명 보호필름(6.5 × 6.5cm, 별도 판매)을 덧붙이면 비에 젖지 않고 유리창에 붙이기 쉽습니다.</p>';
     document.body.classList.add('st-printing');
     var done = function(){ document.body.classList.remove('st-printing'); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);
