@@ -132,6 +132,9 @@
   };
 
   /* ── 상태 ── */
+  var COUP = {};
+  function cDate(d){ d = new Date(d); return d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일'; }
+  function cPhase(c){ var n = new Date(); return n < new Date(c.full_until) ? 'full' : (n < new Date(c.msg_until) ? 'msg' : 'off'); }
   async function load(){
     var u = await BK.user();
     $('auth').classList.toggle('bk-hide', !!u);
@@ -141,6 +144,8 @@
     var r = await BK.sb.rpc('baroka_state');
     if (r.error || !r.data || !r.data.ok) { say('불러오지 못했어요. ' + ((r.error && r.error.message) || ''), 'bad'); return; }
     ST = r.data;
+    /* 🔴 2026-11-12 간편 등록(garimcall.com/car) 1개월 무료 쿠폰 차 */
+    COUP = {}; try { var cl = await BK.sb.rpc('car_coupon_list'); ((cl && cl.data) || []).forEach(function(c){ if (!c.paid) COUP[c.id] = c; }); } catch (e) {}
     $('who').textContent = (ST.nickname || '') + ' 님으로 로그인됨';
     try { if (window.PartnerRef) PartnerRef.mount($('prBox')); } catch (e) {}
     $('pReg').textContent = won(ST.price_reg); $('pChg').textContent = won(ST.price_change);
@@ -174,10 +179,34 @@
       var car = ST.cars.find(function(c){ return c.id === id; });
       b.onclick = function(){ ({ print: doPrint, qr: doQr, change: doChange, remove: doRemove })[b.getAttribute('data-a')](car); };
     });
-    $('others').innerHTML = (ST.other_cars || []).length ? '<section class="bk-card"><h2>에일리어스콜에 등록한 차</h2>' +
+    var others = (ST.other_cars || []).filter(function(o){ return !COUP[o.id]; });
+    var coups = Object.keys(COUP).map(function(k){ return COUP[k]; });
+    $('others').innerHTML =
+      coups.map(function(c){
+        var ph = cPhase(c);
+        var st = ph === 'full' ? '🎁 1개월 무료 중 — <b>' + cDate(c.full_until) + '</b>까지 전화 + 문자, <b>' + cDate(c.msg_until) + '</b>까지 문자만'
+               : ph === 'msg' ? '<b style="color:#B7791F">⚠ 무료 전화가 끝났어요 — ' + cDate(c.msg_until) + '까지 문자만 와요.</b> 그 뒤엔 연결이 멈춰요.'
+               : '<b style="color:#C0392B">⛔ 무료 기간이 끝나 연결이 멈췄어요.</b> 등록하면 바로 다시 열려요.';
+        return '<section class="bk-card"><h2>' + BK.esc(BK.plateNice(c.plate)) + '</h2><p class="bk-sub">' + st + '</p>' +
+          '<button class="bk-btn sm" type="button" data-move="' + c.id + '">🎫 ' + won(ST.price_reg) + '으로 계속 쓰기 (한 번 · 차 바꿀 때까지)</button>' +
+          '<div class="bk-row"><button class="bk-btn ghost sm" type="button" data-cqr="' + c.id + '">🏷 QR 스티커</button><button class="bk-btn ghost sm" type="button" data-cpl="' + c.id + '">🔺 대시보드 알림판</button></div></section>';
+      }).join('') +
+      (others.length ? '<section class="bk-card"><h2>에일리어스콜에 등록한 차</h2>' +
       '<p class="bk-sub">바로카로 옮기면 월 요금 없이 전화 · 문자를 계속 받아요. 등록권 1장(' + won(ST.price_reg) + ')이 필요해요.</p>' +
-      ST.other_cars.map(function(o){ return '<button class="bk-btn ghost sm" type="button" data-move="' + o.id + '">' + BK.esc(BK.plateNice(o.plate)) + ' — 바로카로 옮기기</button>'; }).join('') +
-      '</section>' : '';
+      others.map(function(o){ return '<button class="bk-btn ghost sm" type="button" data-move="' + o.id + '">' + BK.esc(BK.plateNice(o.plate)) + ' — 바로카로 옮기기</button>'; }).join('') +
+      '</section>' : '');
+    $('others').querySelectorAll('[data-cqr]').forEach(function(b){ b.onclick = function(){ var c = COUP[b.getAttribute('data-cqr')]; doQr({ plate: c.plate, token: c.token }); }; });
+    $('others').querySelectorAll('[data-cpl]').forEach(function(b){ b.onclick = function(){ var c = COUP[b.getAttribute('data-cpl')]; if (window.ParkingPlate) ParkingPlate.print({ token: c.token }); }; });
+    /* 끝나 가면 하루 한 번 등록을 권합니다 */
+    try {
+      var nag = coups.filter(function(c){ return cPhase(c) !== 'full' || (new Date(c.full_until) - new Date()) < 5 * 86400000; })[0];
+      var key = 'bk_coupon_nag_' + new Date().toDateString();
+      if (nag && !localStorage.getItem(key)) {
+        localStorage.setItem(key, '1');
+        say('🚗 ' + BK.plateNice(nag.plate) + ' — ' + (cPhase(nag) === 'off' ? '무료 기간이 끝나 연결이 멈췄어요.' : cPhase(nag) === 'msg' ? '무료 전화가 끝나 ' + cDate(nag.msg_until) + '까지 문자만 와요.' : '1개월 무료 전화가 ' + cDate(nag.full_until) + '에 끝나요.') +
+          ' 아래 「' + won(ST.price_reg) + '으로 계속 쓰기」를 누르면 차를 바꿀 때까지 계속 연결됩니다.', 'bad');
+      }
+    } catch (e) {}
     $('others').querySelectorAll('[data-move]').forEach(function(b){
       b.onclick = function(){ startReg({ move: b.getAttribute('data-move') }); };
     });
