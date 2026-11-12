@@ -120,6 +120,9 @@ const SKUS: Record<string, Sku> = {
   /* 🔴 2026-11-03 — 바로카 앱 상품(소모성). 결제 1번 = 권 1장(baroka_credits) */
   baroka_reg:    { kind: 'baroka', baroka: 'reg',    months: 0, nominal: 0, price: 2500 },
   baroka_change: { kind: 'baroka', baroka: 'change', months: 0, nominal: 0, price: 2500 },
+  /* 🔴 2026-11-12 — 가림콜 차량 이용권(바로카와 같은 규칙 · 같은 권). 가림콜 앱 · aliascall.com 에서 팝니다. 매출은 '가림'으로 잡힙니다 */
+  garim_car_reg:    { kind: 'baroka', baroka: 'reg',    months: 0, nominal: 0, price: 2500 },
+  garim_car_change: { kind: 'baroka', baroka: 'change', months: 0, nominal: 0, price: 2500 },
   baroka_g20:    { kind: 'baroka', baroka: 'g20',    months: 0, nominal: 0, price: 1100 },
   baroka_g60:    { kind: 'baroka', baroka: 'g60',    months: 0, nominal: 0, price: 2200 },    // 명의 이전 수수료(받는 분)
 };

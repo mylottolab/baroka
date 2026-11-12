@@ -85,6 +85,9 @@ const SKUS: Record<string, Sku> = {
   /* 🔴 2026-11-03 — 바로카(baroka.kr): 차량 등록 1회 · 번호 변경 1회. 월 요금 없음. 결제 1번 = 권 1장 (baroka_credits) */
   baroka_reg:    { kind: 'baroka', baroka: 'reg',    months: 0, nominal: 0, price: 2500 },
   baroka_change: { kind: 'baroka', baroka: 'change', months: 0, nominal: 0, price: 2500 },
+  /* 🔴 2026-11-12 — 가림콜 차량 이용권(바로카와 같은 규칙 · 같은 권). 가림콜 앱 · aliascall.com 에서 팝니다. 매출은 '가림'으로 잡힙니다 */
+  garim_car_reg:    { kind: 'baroka', baroka: 'reg',    months: 0, nominal: 0, price: 2500 },
+  garim_car_change: { kind: 'baroka', baroka: 'change', months: 0, nominal: 0, price: 2500 },
   /* 🔴 2026-11-03 — 바로카 차 갤러리 액자(기한 없음) */
   baroka_g20:    { kind: 'baroka', baroka: 'g20',    months: 0, nominal: 0, price: 1100 },
   baroka_g60:    { kind: 'baroka', baroka: 'g60',    months: 0, nominal: 0, price: 2200 },
@@ -247,6 +250,7 @@ async function createHotline(pay: any, sku: Sku, lineName: string | null) {
 
 /* ── 영수증에 찍힐 상품 이름 (PG 영수증이 한국어라 번역하지 않음) ── */
 const NAME: Record<string, string> = {
+  garim_car_reg: '가림콜 차량 이용권', garim_car_change: '가림콜 차량 번호 변경',
   baroka_reg: '바로카 차량 등록', baroka_change: '바로카 번호 변경', baroka_g20: '바로카 갤러리 액자 20칸', baroka_g60: '바로카 갤러리 액자 60칸',
   ac_plan_emergency_12m: '긴급 이용권 12개월',
   ac_plan_emergency_pro_12m: 'Pro 긴급 이용권 12개월',
@@ -407,6 +411,10 @@ function back(params: Record<string, unknown>) {
   const q = new URLSearchParams(); Object.entries(params).forEach(([k, v]) => { if (v != null) q.set(k, String(v)); });
   /* 🔴 2026-11-01 — 회선번호 결제는 번호 화면으로 돌아갑니다 */
   const page = (params.kind === 'number' || String(params.sku || '').startsWith('ac_num_')) ? '/aliascall_numbers.html?' : '/aliascall_plans.html?';
+  /* 🔴 2026-11-12 — 가림콜 차량 이용권은 가림콜 마이페이지로 돌아갑니다 */
+  if (String(params.sku || '').startsWith('garim_car')) {
+    return new Response(null, { status: 302, headers: { Location: SITE + '/aliascall_my_account.html?' + q.toString() } });
+  }
   /* 🔴 2026-11-03 — 바로카 결제는 baroka.kr 내 차 화면으로 돌아갑니다 */
   if (params.kind === 'baroka' || String(params.sku || '').startsWith('baroka_')) {
     const g = /^baroka_g/.test(String(params.sku || '')) || /^g/.test(String(params.baroka || ''));
@@ -425,7 +433,7 @@ Deno.serve(async (req) => {
     try {
       const f = await req.formData();
       const st = String(f.get('P_STATUS') || ''), oid = String(f.get('P_OID') || '');
-      if (st !== '00') return back({ webpaid: 0, sku: oid.startsWith('BRKA_') ? (oid.includes('_G_') ? 'baroka_g20' : 'baroka_reg') : null, msg: String(f.get('P_RMESG') || '결제를 마치지 못했습니다') });
+      if (st !== '00') return back({ webpaid: 0, sku: oid.startsWith('GRCA_') ? 'garim_car_reg' : oid.startsWith('BRKA_') ? (oid.includes('_G_') ? 'baroka_g20' : 'baroka_reg') : null, msg: String(f.get('P_RMESG') || '결제를 마치지 못했습니다') });
       const { data: pay } = await supabase.from('payments').select('*').eq('external_payment_id', oid).maybeSingle();
       if (!pay) return back({ webpaid: 0, msg: '주문 정보를 찾을 수 없습니다' });
       if (pay.status === 'completed') return back({ webpaid: 1, sku: pay.google_product_id, ...(await summary(pay)) });
@@ -489,7 +497,7 @@ Deno.serve(async (req) => {
       const qty = sku.kind === 'usage' ? Math.min(10, Math.max(1, Number(o.qty || 1))) : 1;
       const amount = sku.price * qty;
       const ts = Date.now().toString();
-      const oid = (sku.kind === 'baroka' ? (/^g/.test(sku.baroka || '') ? 'BRKA_G_' : 'BRKA_WP_') : 'ALCL_WP_') + ts + '_' + Math.random().toString(36).slice(2, 6);
+      const oid = (skuId.startsWith('garim_car') ? 'GRCA_WP_' : sku.kind === 'baroka' ? (/^g/.test(sku.baroka || '') ? 'BRKA_G_' : 'BRKA_WP_') : 'ALCL_WP_') + ts + '_' + Math.random().toString(36).slice(2, 6);
       const { row } = rowFor(userId, sku, skuId, o, 'inicis_card', oid, amount, 'KRW');
       const ins = await supabase.from('payments').insert(row);
       if (ins.error) return bad('결제 준비 중 오류: ' + ins.error.message, 500);
@@ -498,7 +506,7 @@ Deno.serve(async (req) => {
         chkfake: await sha512b64(String(amount) + oid + ts + HASH_KEY),
         goodname: (sku.kind === 'baroka' ? '' : 'Aliascall ') + (NAME[skuId] || skuId) + (qty > 1 ? ' × ' + qty : ''),
         buyername: String(body.buyername || '회원'), buyertel: String(body.buyertel || ''), buyeremail: String(body.buyeremail || ''),
-        nextUrl: FN_URL, notiUrl: FN_URL, closeUrl: sku.kind === 'baroka' ? BAROKA_SITE + (/^g/.test(sku.baroka || '') ? '/gallery.html?mine=1' : '/my.html') : SITE + (sku.kind === 'number' ? '/aliascall_numbers.html' : '/aliascall_plans.html'),
+        nextUrl: FN_URL, notiUrl: FN_URL, closeUrl: skuId.startsWith('garim_car') ? SITE + '/aliascall_my_account.html' : sku.kind === 'baroka' ? BAROKA_SITE + (/^g/.test(sku.baroka || '') ? '/gallery.html?mine=1' : '/my.html') : SITE + (sku.kind === 'number' ? '/aliascall_numbers.html' : '/aliascall_plans.html'),
       });
     }
 
