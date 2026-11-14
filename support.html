@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>고객센터</title>
+<!-- 💬 2026-11-15 고객센터 — 카카오톡 채널 대신 앱 안에서 묻고 답합니다.
+     자동 답변(support_faq.js · 설명서 내용) → 안 되면 [상담원에게 보내기] → 종합관리자 「💬 고객문의」에서 답장.
+     support.js · support.css · support_faq.js 는 네 사이트(burum.kr · baronu.kr · aliascall.com · baroka.kr)가 똑같은 파일입니다. -->
+<link rel="stylesheet" href="support.css?v=20261115a">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="baroka.js?v=20261109"></script>
+<script src="support_faq.js?v=20261115a"></script>
+<script src="support.js?v=20261115a"></script>
+</head>
+<body>
+<div id="supRoot"></div>
+<script>
+(function(){
+  try {
+    SUP.start({ root: document.getElementById('supRoot'), sb: window.BK && BK.sb, app: 'baroka', color: '#1b2d6b', login: 'my.html', home: 'index.html' });
+  } catch (e) {
+    document.getElementById('supRoot').innerHTML = '<div style="padding:24px;line-height:1.8">고객센터를 열지 못했습니다.<br>이메일 <b>weapps.kr@gmail.com</b> 으로 보내 주세요.</div>';
+  }
+})();
+</script>
+</body>
+</html>
