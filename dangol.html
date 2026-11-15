@@ -102,13 +102,14 @@ function errMsg(e){ var c = (e && (e.error || e.message)) || ''; return ERR[c] |
 async function hub(){
   document.title = '단골창구';
   A.innerHTML = '<div class="hero"><a class="bk" href="javascript:history.length>1?history.back():location.replace(\'index.html\')" aria-label="뒤로">←</a>' +
-    '<div><span class="tag">🏪 단골창구</span><h1>가게에 바로 물어보세요</h1><p>전화번호 없이 · 앱 설치 없이. 가게 QR을 찍거나 가게 코드를 넣어 주세요.</p></div></div>' +
+    '<div><span class="tag">🏪 단골창구</span><h1>가게에 바로 물어보세요</h1><p>전화번호 없이' + (DGHOST ? '' : ' · 앱 설치 없이') + '. 가게 QR을 찍거나 가게 코드를 넣어 주세요.</p></div></div>' +
     '<div class="card"><b class="h">🔎 가게 코드로 찾기</b><p>QR 포스터 아래 적힌 6자리 코드입니다.</p>' +
       '<div class="row"><input id="code" maxlength="6" placeholder="예) HYAASH" style="text-transform:uppercase;letter-spacing:2px;font-size:18px" aria-label="가게 코드"><button class="btn" id="go" type="button" style="flex:none;padding:0 20px">열기</button></div></div>' +
     '<div class="card"><b class="h">💬 내가 물어본 가게</b><div id="mine"><p>불러오는 중…</p></div></div>' +
+    (DGHOST ? '' :   /* dangol.org 는 첫 화면에서 사장님 · 고객님을 나눠 고르므로, 고객님 화면에는 사장님 안내를 넣지 않습니다 */
     '<div class="card"><b class="h">🧑‍🍳 사장님이신가요?</b>' +
       '<p>가게 사진과 소개만 올리면 <b>바로</b> 우리 가게 단골창구가 열립니다. 손님이 QR을 찍으면 자주 묻는 질문이 먼저 답하고, 그래도 궁금하면 사장님께 묻습니다. 사장님 번호는 드러나지 않아요.</p>' +
-      OWNER_CTA() + '</div>' +
+      OWNER_CTA() + '</div>') +
     '<p class="foot">' + (DGHOST ? '단골창구 · 위브앱솔루션' : '단골창구 by 가림콜 · 위브앱솔루션') + '</p>';
   $('go').onclick = function(){ var c = $('code').value.trim().toUpperCase(); if (c.length < 6) { toast('6자리 코드를 넣어 주세요.'); return; } location.href = 'dangol.html?c=' + encodeURIComponent(c); };
   try {
