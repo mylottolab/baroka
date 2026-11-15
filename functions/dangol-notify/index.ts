@@ -116,6 +116,37 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
   try {
     const body = await req.json().catch(() => ({}));
+    /* 🏪 2026-11-15 — 사장님 답장 → 손님 휴대폰(단골창구 앱에서 「답장 알림 받기」를 켠 손님만)
+       부르는 곳: dangol_owner.html (사장님 로그인 토큰으로) · body { reply: <대화 번호> } */
+    if (body.reply) {
+      const rt = String(body.reply || '');
+      const jwt = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+      if (!/^[0-9a-f-]{36}$/i.test(rt) || !jwt) return json({ error: 'bad_request' }, 400);
+      const admin = createClient(SUPABASE_URL, SERVICE);
+      const u = await admin.auth.getUser(jwt);
+      if (u.error || !u.data?.user) return json({ error: 'login' }, 401);
+      const tg = await admin.rpc('dg_notify_guest_targets', { p_thread: rt, p_owner: u.data.user.id });
+      if (tg.error) { console.error('[dangol] 🔴 guest targets', JSON.stringify(tg.error)); return json({ error: 'targets' }, 500); }
+      const gs = (tg.data || []).filter((r: any) => r.push_token);
+      if (!gs.length) return json({ ok: true, sent: 0 });
+      const raw0 = Deno.env.get('FCM_SERVICE_ACCOUNT') || Deno.env.get('FIREBASE_SERVICE_ACCOUNT');
+      if (!raw0) throw new Error('FCM_SERVICE_ACCOUNT 가 없습니다');
+      const sa0 = JSON.parse(raw0);
+      const at0 = await getGoogleToken(sa0);
+      let sent0 = 0;
+      for (const r of gs) {
+        const title = '🧑‍🍳 ' + r.desk_name + ' 사장님이 답장했어요';
+        const text = String(r.preview || '').replace(/\s+/g, ' ');
+        const o = await sendOne(sa0.project_id, at0, r.push_token, {
+          notification: { title, body: text },
+          data: { kind: 'dangol_reply', thread: rt, url: 'dangol.html?c=' + r.code, title, body: text },
+          android: { priority: 'HIGH', notification: { channel_id: 'aliascall_urgent', sound: 'default', tag: 'dangol-r-' + rt } },
+          apns: { headers: { 'apns-priority': '10', 'apns-push-type': 'alert' }, payload: { aps: { sound: 'default', 'thread-id': 'dangol-r' } } },
+        });
+        if (o.ok) sent0++;
+      }
+      return json({ ok: true, sent: sent0 });
+    }
     const thread = String(body.thread || ''), token = String(body.token || '');
     if (!/^[0-9a-f-]{36}$/i.test(thread) || token.length < 24 || token.length > 100) return json({ error: 'bad_request' }, 400);
     const admin = createClient(SUPABASE_URL, SERVICE);

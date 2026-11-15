@@ -90,6 +90,7 @@ const SKUS: Record<string, Sku> = {
   garim_car_change: { kind: 'baroka', baroka: 'change', months: 0, nominal: 0, price: 2500 },
   /* 🔴 2026-11-03 — 바로카 차 갤러리 액자(기한 없음) */
   garim_dangol_1y: { kind: 'dangol', months: 12, nominal: 12, price: 9900 },   // 🏪 2026-11-15 단골창구 개설료 1년
+  dangol_1y:       { kind: 'dangol', months: 12, nominal: 12, price: 9900 },   // 🏪 단골창구 사이트 dangol.org
   baroka_g20:    { kind: 'baroka', baroka: 'g20',    months: 0, nominal: 0, price: 1100 },
   baroka_g60:    { kind: 'baroka', baroka: 'g60',    months: 0, nominal: 0, price: 2200 },
 };
@@ -261,7 +262,7 @@ const NAME: Record<string, string> = {
   ac_pro_business_1m: '프로 비즈니스 1개월', ac_pro_business_6m: '프로 비즈니스 6개월', ac_pro_business_12m: '프로 비즈니스 12개월',
   ac_pro_enterprise_1m: '프로 엔터프라이즈 1개월', ac_pro_enterprise_6m: '프로 엔터프라이즈 6개월', ac_pro_enterprise_12m: '프로 엔터프라이즈 12개월',
   ac_listing_1m: '공개 업체 목록 게재 1개월', ac_listing_6m: '공개 업체 목록 게재 6개월', ac_listing_12m: '공개 업체 목록 게재 12개월',
-  ac_usage_1gb_3m: '추가 사용량 1GB', garim_dangol_1y: '단골창구 개설료 1년',
+  ac_usage_1gb_3m: '추가 사용량 1GB', garim_dangol_1y: '단골창구 개설료 1년', dangol_1y: '단골창구 개설료 1년',
   ac_num_4_basic: '회선번호 4자리', ac_num_4_good: '좋은 회선번호 4자리', ac_num_5_basic: '회선번호 5자리', ac_num_5_good: '좋은 회선번호 5자리',
   ac_num_6_basic: '회선번호 6자리', ac_num_6_good: '좋은 회선번호 6자리', ac_num_7_basic: '회선번호 7자리', ac_num_7_good: '좋은 회선번호 7자리',
   ac_num_8_good: '좋은 회선번호 8자리', ac_num_keep: '회선번호 1년 더 잡아 두기', ac_num_transfer: '회선번호 명의 이전',
@@ -425,6 +426,9 @@ function back(params: Record<string, unknown>) {
   /* 🔴 2026-11-01 — 회선번호 결제는 번호 화면으로 돌아갑니다 */
   const page = (params.kind === 'number' || String(params.sku || '').startsWith('ac_num_')) ? '/aliascall_numbers.html?' : '/aliascall_plans.html?';
   /* 🏪 2026-11-15 — 단골창구 개설료는 사장님 화면으로 돌아갑니다 */
+  if (String(params.sku || '').startsWith('dangol_')) {   // dangol.org 에서 산 것은 dangol.org 로
+    return new Response(null, { status: 302, headers: { Location: 'https://dangol.org/dangol_owner.html?' + q.toString() } });
+  }
   if (params.kind === 'dangol' || String(params.sku || '').startsWith('garim_dangol')) {
     return new Response(null, { status: 302, headers: { Location: SITE + '/dangol_owner.html?' + q.toString() } });
   }
@@ -450,7 +454,7 @@ Deno.serve(async (req) => {
     try {
       const f = await req.formData();
       const st = String(f.get('P_STATUS') || ''), oid = String(f.get('P_OID') || '');
-      if (st !== '00') return back({ webpaid: 0, sku: oid.startsWith('DGCH_') ? 'garim_dangol_1y' : oid.startsWith('GRCA_') ? 'garim_car_reg' : oid.startsWith('BRKA_') ? (oid.includes('_G_') ? 'baroka_g20' : 'baroka_reg') : null, msg: String(f.get('P_RMESG') || '결제를 마치지 못했습니다') });
+      if (st !== '00') return back({ webpaid: 0, sku: oid.startsWith('DGOR_') ? 'dangol_1y' : oid.startsWith('DGCH_') ? 'garim_dangol_1y' : oid.startsWith('GRCA_') ? 'garim_car_reg' : oid.startsWith('BRKA_') ? (oid.includes('_G_') ? 'baroka_g20' : 'baroka_reg') : null, msg: String(f.get('P_RMESG') || '결제를 마치지 못했습니다') });
       const { data: pay } = await supabase.from('payments').select('*').eq('external_payment_id', oid).maybeSingle();
       if (!pay) return back({ webpaid: 0, msg: '주문 정보를 찾을 수 없습니다' });
       if (pay.status === 'completed') return back({ webpaid: 1, sku: pay.google_product_id, ...(await summary(pay)) });
@@ -514,7 +518,7 @@ Deno.serve(async (req) => {
       const qty = sku.kind === 'usage' ? Math.min(10, Math.max(1, Number(o.qty || 1))) : 1;
       const amount = sku.price * qty;
       const ts = Date.now().toString();
-      const oid = (skuId.startsWith('garim_dangol') ? 'DGCH_WP_' : skuId.startsWith('garim_car') ? 'GRCA_WP_' : sku.kind === 'baroka' ? (/^g/.test(sku.baroka || '') ? 'BRKA_G_' : 'BRKA_WP_') : 'ALCL_WP_') + ts + '_' + Math.random().toString(36).slice(2, 6);
+      const oid = (skuId.startsWith('dangol_') ? 'DGOR_WP_' : skuId.startsWith('garim_dangol') ? 'DGCH_WP_' : skuId.startsWith('garim_car') ? 'GRCA_WP_' : sku.kind === 'baroka' ? (/^g/.test(sku.baroka || '') ? 'BRKA_G_' : 'BRKA_WP_') : 'ALCL_WP_') + ts + '_' + Math.random().toString(36).slice(2, 6);
       const { row } = rowFor(userId, sku, skuId, o, 'inicis_card', oid, amount, 'KRW');
       const ins = await supabase.from('payments').insert(row);
       if (ins.error) return bad('결제 준비 중 오류: ' + ins.error.message, 500);
@@ -523,7 +527,7 @@ Deno.serve(async (req) => {
         chkfake: await sha512b64(String(amount) + oid + ts + HASH_KEY),
         goodname: (sku.kind === 'baroka' ? '' : 'Aliascall ') + (NAME[skuId] || skuId) + (qty > 1 ? ' × ' + qty : ''),
         buyername: String(body.buyername || '회원'), buyertel: String(body.buyertel || ''), buyeremail: String(body.buyeremail || ''),
-        nextUrl: FN_URL, notiUrl: FN_URL, closeUrl: skuId.startsWith('garim_dangol') ? SITE + '/dangol_owner.html' : skuId.startsWith('garim_car') ? SITE + '/aliascall_my_account.html' : sku.kind === 'baroka' ? BAROKA_SITE + (/^g/.test(sku.baroka || '') ? '/gallery.html?mine=1' : '/my.html') : SITE + (sku.kind === 'number' ? '/aliascall_numbers.html' : '/aliascall_plans.html'),
+        nextUrl: FN_URL, notiUrl: FN_URL, closeUrl: skuId.startsWith('dangol_') ? 'https://dangol.org/dangol_owner.html' : skuId.startsWith('garim_dangol') ? SITE + '/dangol_owner.html' : skuId.startsWith('garim_car') ? SITE + '/aliascall_my_account.html' : sku.kind === 'baroka' ? BAROKA_SITE + (/^g/.test(sku.baroka || '') ? '/gallery.html?mine=1' : '/my.html') : SITE + (sku.kind === 'number' ? '/aliascall_numbers.html' : '/aliascall_plans.html'),
       });
     }
 

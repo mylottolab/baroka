@@ -67,7 +67,8 @@ const CORS = {
 const PACKAGE = 'com.weaveapp.aliascall';
 /* 🔴 2026-11-03 — 바로카 앱(com.weaveapp.baroka)도 이 함수로 확인합니다. 상품 번호가 baroka_ 로 시작하면 바로카 앱 것 */
 const BAROKA_PACKAGE = 'com.weaveapp.baroka';
-function pkgOf(productId: string) { return String(productId || '').startsWith('baroka_') ? BAROKA_PACKAGE : PACKAGE; }
+const DANGOL_PACKAGE = 'com.weaveapp.dangol';   // 🏪 2026-11-15 단골창구 독립 앱
+function pkgOf(productId: string) { const p = String(productId || ''); return p.startsWith('baroka_') ? BAROKA_PACKAGE : p.startsWith('dangol_') ? DANGOL_PACKAGE : PACKAGE; }
 /* 🔴 2026-10-11 — 애플 결제를 기록할 때 쓰는 이름(payments.method) */
 const APPLE_METHOD = 'app_store';
 
@@ -125,6 +126,7 @@ const SKUS: Record<string, Sku> = {
   garim_car_change: { kind: 'baroka', baroka: 'change', months: 0, nominal: 0, price: 2500 },
   /* 🏪 2026-11-15 단골창구 개설료 1년 (애플은 garim_dangol_1y_nr — 앱이 _nr 를 떼고 보냅니다) */
   garim_dangol_1y: { kind: 'dangol', months: 12, nominal: 12, price: 9900 },
+  dangol_1y:       { kind: 'dangol', months: 12, nominal: 12, price: 9900 },   // 단골창구 앱(com.weaveapp.dangol) · 애플 dangol_1y_nr
   baroka_g20:    { kind: 'baroka', baroka: 'g20',    months: 0, nominal: 0, price: 1100 },
   baroka_g60:    { kind: 'baroka', baroka: 'g60',    months: 0, nominal: 0, price: 2200 },    // 명의 이전 수수료(받는 분)
 };

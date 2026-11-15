@@ -69,10 +69,11 @@ var sb = window.supabase.createClient(URL0, KEY0, { auth: { persistSession: fals
 var A = document.getElementById('app'), Q = new URLSearchParams(location.search), poll = null;
 /* 🔴 2026-11-15 사장님 개설 안내 — 결제는 가림콜(aliascall.com · 가림콜 앱)에서만.
    부름 · 누름 · 바로너 앱 안에서는 값 · 결제 링크를 보이지 않습니다(그 앱의 결제 창구는 다른 상품용 · 스토어 규칙). */
+var DGHOST = /(^|\.)dangol\.org$/.test(location.hostname);   // 🏪 2026-11-15 단골창구 독립 사이트(dangol.org) · 앱
 function OWNER_CTA(){
-  var otherApp = location.hostname !== 'aliascall.com' && !!(window.AliasNative || (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || (window.webkit && window.webkit.messageHandlers));
+  var otherApp = location.hostname !== 'aliascall.com' && !DGHOST && !!(window.AliasNative || (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || (window.webkit && window.webkit.messageHandlers));
   if (otherApp) return '<p>사장님은 <b>가림콜</b> 앱의 「내 계정 → 🏪 단골창구」에서 우리 가게 단골창구를 여실 수 있어요.</p>';
-  return '<p><b>개설료 1년 9,900원</b> · 처음 30일 무료</p><a class="btn c" href="https://aliascall.com/dangol_owner.html">우리 가게 단골창구 열기</a>';
+  return '<p><b>개설료 1년 9,900원</b> · 처음 30일 무료</p><a class="btn c" href="' + (DGHOST ? 'dangol_owner.html' : 'https://aliascall.com/dangol_owner.html') + '">우리 가게 단골창구 열기</a>';
 }
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
@@ -108,7 +109,7 @@ async function hub(){
     '<div class="card"><b class="h">🧑‍🍳 사장님이신가요?</b>' +
       '<p>가게 사진과 소개만 올리면 <b>바로</b> 우리 가게 단골창구가 열립니다. 손님이 QR을 찍으면 자주 묻는 질문이 먼저 답하고, 그래도 궁금하면 사장님께 묻습니다. 사장님 번호는 드러나지 않아요.</p>' +
       OWNER_CTA() + '</div>' +
-    '<p class="foot">단골창구 by 가림콜 · 위브앱솔루션</p>';
+    '<p class="foot">' + (DGHOST ? '단골창구 · 위브앱솔루션' : '단골창구 by 가림콜 · 위브앱솔루션') + '</p>';
   $('go').onclick = function(){ var c = $('code').value.trim().toUpperCase(); if (c.length < 6) { toast('6자리 코드를 넣어 주세요.'); return; } location.href = 'dangol.html?c=' + encodeURIComponent(c); };
   try {
     var ts = await rpc('dg_guest_threads', { p_token: token() });
@@ -142,7 +143,7 @@ async function desk(code){
       '<textarea id="body" maxlength="1000" placeholder="예) 오늘 저녁 6시에 4명 자리 있을까요?" aria-label="물어볼 내용"></textarea>' +
       '<button class="btn c" id="send" type="button">보내기</button></div>' +
     '<div style="text-align:center"><button class="link" id="report" type="button">🚩 이 가게 신고하기</button></div>' +
-    '<p class="foot"><a href="dangol.html" style="color:inherit">단골창구 입구</a> · 단골창구 by 가림콜</p>';
+    '<p class="foot"><a href="dangol.html" style="color:inherit">단골창구 입구</a> · ' + (DGHOST ? '단골창구 · dangol.org' : '단골창구 by 가림콜') + '</p>';
   A.innerHTML = h;
   if (items.length) faq(items, '');
   var fq = $('fq'); if (fq) fq.oninput = function(){ faq(items, fq.value.trim()); };
@@ -175,11 +176,45 @@ async function loadThread(prefer){
   box.innerHTML = '<div class="card"><b class="h">📮 사장님과 나눈 이야기</b><div class="msgs">' + TH.msgs.map(function(m){
     return '<div class="m ' + (m.o ? 'o' : 'me') + '"><small>' + (m.o ? '🧑‍🍳 사장님' : '나') + ' · ' + when(m.t) + '</small><div class="pre-wrap">' + esc(m.b) + '</div>' +
       (m.o && risky(m.b) ? '<div class="warn" style="margin-top:6px">' + WARN + '</div>' : '') + '</div>';
-  }).join('') + '</div>' + (TH.status === 'open' ? '<p>사장님이 확인하면 여기에 답이 보여요.</p>' : '') + '</div>';
+  }).join('') + '</div>' + (TH.status === 'open' ? '<p>사장님이 확인하면 여기에 답이 보여요.</p>' : '') + '<div id="gpush"></div></div>';
   $('askCard').querySelector('b').textContent = '💬 이어서 묻기';
+  gpushBox();
   if (TH.unread) rpc('dg_guest_seen', { p_token: token(), p_thread: TH.id }).catch(function(){});
   if (!poll) poll = setInterval(function(){ if (!document.hidden) loadThread(TH && TH.id); }, 15000);
 }
+/* 🔔 2026-11-15 단골창구 앱 안에서만 — 「사장님 답장 오면 알림 받기」 (11_dangol_guest_push.sql)
+   손님은 가입이 없으므로, 이 휴대폰의 손님 열쇠(dangol_token)와 알림 주소를 짝지어 둡니다. 웹 브라우저에서는 보이지 않습니다. */
+/* ⚠ 단골창구 앱에서만 — 부름 · 바로너 앱은 알림 서버(파이어베이스)가 달라 이 길로 보내면 닿지 않습니다 */
+function isDangolApp(){ try { return window.ALIAS_APP === 'dangol' || !!(window.AliasNative && AliasNative.appKind && AliasNative.appKind() === 'dangol'); } catch (e) { return false; } }
+function PN(){ try { return isDangolApp() && window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.PushNotifications; } catch (e) { return null; } }
+function pushToken(P){
+  return new Promise(function(res, rej){
+    var done = false, t = setTimeout(function(){ if (!done) { done = true; rej(new Error('timeout')); } }, 15000);
+    P.addListener('registration', function(x){ if (!done) { done = true; clearTimeout(t); res(x.value); } });
+    P.addListener('registrationError', function(e){ if (!done) { done = true; clearTimeout(t); rej(new Error(JSON.stringify(e))); } });
+    P.register();
+  });
+}
+async function gpushSync(ask){
+  var P = PN(); if (!P) return false;
+  var perm = await P.checkPermissions();
+  if (perm.receive !== 'granted') { if (!ask) return false; perm = await P.requestPermissions(); if (perm.receive !== 'granted') { toast('휴대폰 설정에서 단골창구 알림을 허용해 주세요.'); return false; } }
+  var tk = await pushToken(P);
+  var r = await rpc('dg_guest_push_set', { p_token: token(), p_push: tk, p_platform: (Capacitor.getPlatform && Capacitor.getPlatform()) || '' });
+  if (r && r.ok) { store('dangol_gpush', String(Date.now())); return true; }
+  return false;
+}
+async function gpushBox(){
+  var bx = $('gpush'); if (!bx || !PN()) return;
+  var last = Number(store('dangol_gpush') || 0);
+  if (last) { bx.innerHTML = '<p style="font-size:13px">🔔 사장님이 답장하면 알림이 와요.</p>'; if (Date.now() - last > 86400e3) gpushSync(false).catch(function(){}); return; }
+  bx.innerHTML = '<button class="btn" id="gpGo" type="button" style="background:var(--coral,#E8734A)">🔔 사장님 답장 오면 알림 받기</button>';
+  $('gpGo').onclick = async function(){ this.disabled = true; try { if (await gpushSync(true)) { toast('알림을 켰어요. 🔔'); gpushBox(); return; } } catch (e) { toast('알림을 켜지 못했어요. 잠시 뒤 다시 눌러 주세요.'); } this.disabled = false; };
+}
+/* 알림을 눌러 들어오면 그 가게 화면으로 */
+(function(){ var P = PN(); if (!P || window.__dgTap) return; window.__dgTap = true;
+  P.addListener('pushNotificationActionPerformed', function(a){ var d = (a && a.notification && a.notification.data) || {}; if (d.url) location.href = d.url; }); })();
+
 async function send(){
   var b = $('body').value.trim(), nm = $('nm').value.trim(), btn = $('send');
   if (!b) { toast('물어볼 내용을 적어 주세요.'); return; }
