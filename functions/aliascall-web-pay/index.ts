@@ -40,7 +40,7 @@ const PAYPAL_CLIENT_ID = Deno.env.get('PAYPAL_CLIENT_ID') || '';
 const PAYPAL_CLIENT_SECRET = Deno.env.get('PAYPAL_CLIENT_SECRET') || '';
 const PAYPAL_API = (Deno.env.get('PAYPAL_MODE') || 'sandbox') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
 
-type Sku = { kind: 'emergency' | 'line' | 'pro' | 'listing' | 'usage' | 'number' | 'baroka'; baroka?: 'reg' | 'change' | 'g20' | 'g60'; months: number; nominal: number; price: number; tier?: string;
+type Sku = { kind: 'emergency' | 'line' | 'pro' | 'listing' | 'usage' | 'number' | 'baroka' | 'dangol'; baroka?: 'reg' | 'change' | 'g20' | 'g60'; months: number; nominal: number; price: number; tier?: string;
              persons?: 2 | 4; capGb?: number; ocrPro?: boolean };
 
 /* 🔴 화면 · Play Console 과 **같아야** 합니다. 지운 번호는 다시 못 씁니다. */
@@ -89,6 +89,7 @@ const SKUS: Record<string, Sku> = {
   garim_car_reg:    { kind: 'baroka', baroka: 'reg',    months: 0, nominal: 0, price: 2500 },
   garim_car_change: { kind: 'baroka', baroka: 'change', months: 0, nominal: 0, price: 2500 },
   /* 🔴 2026-11-03 — 바로카 차 갤러리 액자(기한 없음) */
+  garim_dangol_1y: { kind: 'dangol', months: 12, nominal: 12, price: 9900 },   // 🏪 2026-11-15 단골창구 개설료 1년
   baroka_g20:    { kind: 'baroka', baroka: 'g20',    months: 0, nominal: 0, price: 1100 },
   baroka_g60:    { kind: 'baroka', baroka: 'g60',    months: 0, nominal: 0, price: 2200 },
 };
@@ -260,7 +261,7 @@ const NAME: Record<string, string> = {
   ac_pro_business_1m: '프로 비즈니스 1개월', ac_pro_business_6m: '프로 비즈니스 6개월', ac_pro_business_12m: '프로 비즈니스 12개월',
   ac_pro_enterprise_1m: '프로 엔터프라이즈 1개월', ac_pro_enterprise_6m: '프로 엔터프라이즈 6개월', ac_pro_enterprise_12m: '프로 엔터프라이즈 12개월',
   ac_listing_1m: '공개 업체 목록 게재 1개월', ac_listing_6m: '공개 업체 목록 게재 6개월', ac_listing_12m: '공개 업체 목록 게재 12개월',
-  ac_usage_1gb_3m: '추가 사용량 1GB',
+  ac_usage_1gb_3m: '추가 사용량 1GB', garim_dangol_1y: '단골창구 개설료 1년',
   ac_num_4_basic: '회선번호 4자리', ac_num_4_good: '좋은 회선번호 4자리', ac_num_5_basic: '회선번호 5자리', ac_num_5_good: '좋은 회선번호 5자리',
   ac_num_6_basic: '회선번호 6자리', ac_num_6_good: '좋은 회선번호 6자리', ac_num_7_basic: '회선번호 7자리', ac_num_7_good: '좋은 회선번호 7자리',
   ac_num_8_good: '좋은 회선번호 8자리', ac_num_keep: '회선번호 1년 더 잡아 두기', ac_num_transfer: '회선번호 명의 이전',
@@ -296,6 +297,10 @@ async function precheck(userId: string, sku: Sku, o: Opts): Promise<string | nul
       if (!data || !data.length) return '고르신 번호를 잡아 두지 못했습니다. 번호를 다시 골라 주세요.';
     }
   }
+  if (sku.kind === 'dangol') {   // 🏪 2026-11-15 — 내 단골창구인지
+    const { data } = o.usageTargetId ? await supabase.rpc('dg_can_pay', { p_user: userId, p_desk: String(o.usageTargetId) }) : { data: false };
+    if (!data) return '단골창구를 찾을 수 없습니다. 화면을 새로 고친 뒤 다시 눌러 주세요.';
+  }
   if (sku.kind === 'usage') {
     if (!o.usageTargetId) return '추가 사용량을 붙일 회선을 골라주세요.';
     if (o.usageKind === 'pro') {
@@ -319,7 +324,7 @@ function rowFor(userId: string, sku: Sku, skuId: string, o: Opts, method: string
     amount_minor_units: amountMinor, currency_code: currency, status: 'pending',
     purpose: sku.kind === 'emergency' ? 'subscription' : 'hotline',
     google_product_id: skuId,               // 상품 번호 — 구글과 같은 칸을 씁니다(웹은 method 로 구분)
-    google_action: sku.kind === 'emergency' ? 'emergency' : (sku.kind === 'usage' ? 'usage' : (sku.kind === 'baroka' ? 'baroka_' + sku.baroka : null)),
+    google_action: sku.kind === 'emergency' ? 'emergency' : (sku.kind === 'usage' ? 'usage' : (sku.kind === 'baroka' ? 'baroka_' + sku.baroka : (sku.kind === 'dangol' ? 'dangol' : null))),
     order_opts: { ...o, qty },              // 결제 뒤 적용에 쓸 선택(회선 이름 · 연장할 회선 · 붙일 곳 …)
   };
   if (sku.kind === 'pro') { row.hotline_tier = sku.tier; row.hotline_duration_months = sku.months; row.hotline_price_krw = sku.price; }
@@ -347,6 +352,13 @@ async function fulfill(pay: any) {
     if (ge || !g || !g.ok) throw new Error('바로카 권을 드리지 못했습니다(' + (ge?.message || g?.error) + ')');
     await supabase.from('payments').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', pay.id);
     return { ok: true, kind: 'baroka', baroka: sku.baroka };
+  }
+  /* 🏪 2026-11-15 — 단골창구 개설료: 고른 단골창구에 기간만 넣고 끝 */
+  if (sku.kind === 'dangol') {
+    const { data: g, error: ge } = await supabase.rpc('dg_grant_paid', { p_user: userId, p_desk: String(o.usageTargetId || ''), p_months: sku.months, p_payment: pay.id, p_source: pay.method });
+    if (ge || !g || !g.ok) throw new Error('단골창구 기간을 넣지 못했습니다(' + (ge?.message || g?.error) + '). 고객센터에서 도와드립니다.');
+    await supabase.from('payments').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', pay.id);
+    return { ok: true, kind: 'dangol', months: sku.months, until: g.until };
   }
   let hotline: any = null, extended = false, sub: any = null;
   if (sku.kind === 'line') {
@@ -389,6 +401,7 @@ async function summary(pay: any) {
   let inv = null;
   if (pay.hotline_id) { const { data } = await supabase.from('hotlines').select('invite_token').eq('id', pay.hotline_id).maybeSingle(); inv = data?.invite_token ?? null; }
   if (sku?.kind === 'baroka') return { ok: true, already: true, kind: 'baroka', baroka: sku.baroka };
+  if (sku?.kind === 'dangol') return { ok: true, already: true, kind: 'dangol', months: sku.months };
   return { ok: true, already: true, kind: sku?.kind, months: sku?.months, hotlineId: pay.hotline_id ?? null,
            inviteToken: inv, subscriptionId: pay.hotline_subscription_id ?? null };
 }
@@ -411,6 +424,10 @@ function back(params: Record<string, unknown>) {
   const q = new URLSearchParams(); Object.entries(params).forEach(([k, v]) => { if (v != null) q.set(k, String(v)); });
   /* 🔴 2026-11-01 — 회선번호 결제는 번호 화면으로 돌아갑니다 */
   const page = (params.kind === 'number' || String(params.sku || '').startsWith('ac_num_')) ? '/aliascall_numbers.html?' : '/aliascall_plans.html?';
+  /* 🏪 2026-11-15 — 단골창구 개설료는 사장님 화면으로 돌아갑니다 */
+  if (params.kind === 'dangol' || String(params.sku || '').startsWith('garim_dangol')) {
+    return new Response(null, { status: 302, headers: { Location: SITE + '/dangol_owner.html?' + q.toString() } });
+  }
   /* 🔴 2026-11-12 — 가림콜 차량 이용권은 가림콜 마이페이지로 돌아갑니다 */
   if (String(params.sku || '').startsWith('garim_car')) {
     return new Response(null, { status: 302, headers: { Location: SITE + '/aliascall_my_account.html?' + q.toString() } });
@@ -433,7 +450,7 @@ Deno.serve(async (req) => {
     try {
       const f = await req.formData();
       const st = String(f.get('P_STATUS') || ''), oid = String(f.get('P_OID') || '');
-      if (st !== '00') return back({ webpaid: 0, sku: oid.startsWith('GRCA_') ? 'garim_car_reg' : oid.startsWith('BRKA_') ? (oid.includes('_G_') ? 'baroka_g20' : 'baroka_reg') : null, msg: String(f.get('P_RMESG') || '결제를 마치지 못했습니다') });
+      if (st !== '00') return back({ webpaid: 0, sku: oid.startsWith('DGCH_') ? 'garim_dangol_1y' : oid.startsWith('GRCA_') ? 'garim_car_reg' : oid.startsWith('BRKA_') ? (oid.includes('_G_') ? 'baroka_g20' : 'baroka_reg') : null, msg: String(f.get('P_RMESG') || '결제를 마치지 못했습니다') });
       const { data: pay } = await supabase.from('payments').select('*').eq('external_payment_id', oid).maybeSingle();
       if (!pay) return back({ webpaid: 0, msg: '주문 정보를 찾을 수 없습니다' });
       if (pay.status === 'completed') return back({ webpaid: 1, sku: pay.google_product_id, ...(await summary(pay)) });
@@ -497,7 +514,7 @@ Deno.serve(async (req) => {
       const qty = sku.kind === 'usage' ? Math.min(10, Math.max(1, Number(o.qty || 1))) : 1;
       const amount = sku.price * qty;
       const ts = Date.now().toString();
-      const oid = (skuId.startsWith('garim_car') ? 'GRCA_WP_' : sku.kind === 'baroka' ? (/^g/.test(sku.baroka || '') ? 'BRKA_G_' : 'BRKA_WP_') : 'ALCL_WP_') + ts + '_' + Math.random().toString(36).slice(2, 6);
+      const oid = (skuId.startsWith('garim_dangol') ? 'DGCH_WP_' : skuId.startsWith('garim_car') ? 'GRCA_WP_' : sku.kind === 'baroka' ? (/^g/.test(sku.baroka || '') ? 'BRKA_G_' : 'BRKA_WP_') : 'ALCL_WP_') + ts + '_' + Math.random().toString(36).slice(2, 6);
       const { row } = rowFor(userId, sku, skuId, o, 'inicis_card', oid, amount, 'KRW');
       const ins = await supabase.from('payments').insert(row);
       if (ins.error) return bad('결제 준비 중 오류: ' + ins.error.message, 500);
@@ -506,7 +523,7 @@ Deno.serve(async (req) => {
         chkfake: await sha512b64(String(amount) + oid + ts + HASH_KEY),
         goodname: (sku.kind === 'baroka' ? '' : 'Aliascall ') + (NAME[skuId] || skuId) + (qty > 1 ? ' × ' + qty : ''),
         buyername: String(body.buyername || '회원'), buyertel: String(body.buyertel || ''), buyeremail: String(body.buyeremail || ''),
-        nextUrl: FN_URL, notiUrl: FN_URL, closeUrl: skuId.startsWith('garim_car') ? SITE + '/aliascall_my_account.html' : sku.kind === 'baroka' ? BAROKA_SITE + (/^g/.test(sku.baroka || '') ? '/gallery.html?mine=1' : '/my.html') : SITE + (sku.kind === 'number' ? '/aliascall_numbers.html' : '/aliascall_plans.html'),
+        nextUrl: FN_URL, notiUrl: FN_URL, closeUrl: skuId.startsWith('garim_dangol') ? SITE + '/dangol_owner.html' : skuId.startsWith('garim_car') ? SITE + '/aliascall_my_account.html' : sku.kind === 'baroka' ? BAROKA_SITE + (/^g/.test(sku.baroka || '') ? '/gallery.html?mine=1' : '/my.html') : SITE + (sku.kind === 'number' ? '/aliascall_numbers.html' : '/aliascall_plans.html'),
       });
     }
 

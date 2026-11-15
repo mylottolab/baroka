@@ -75,7 +75,7 @@ const APPLE_METHOD = 'app_store';
    nominal = 상품 이름의 개월수 (3 · 6 · 12) — hotlines.duration_months 에 적습니다
    🔴 2026-09-28 — hotlines.duration_months 에는 DB 가 정한 숫자만 들어갑니다
      (hotlines_duration_months_check). 4 · 7 · 13 을 넣었다가 회선이 안 만들어졌습니다. */
-type Sku = { kind: 'emergency' | 'line' | 'pro' | 'listing' | 'usage' | 'number' | 'baroka'; baroka?: 'reg' | 'change' | 'g20' | 'g60'; months: number; nominal: number; price: number; tier?: string;
+type Sku = { kind: 'emergency' | 'line' | 'pro' | 'listing' | 'usage' | 'number' | 'baroka' | 'dangol'; baroka?: 'reg' | 'change' | 'g20' | 'g60'; months: number; nominal: number; price: number; tier?: string;
              persons?: 2 | 4; capGb?: number; ocrPro?: boolean };
 
 /* 🔴 화면 · Play Console 과 **같아야** 합니다. 지운 번호는 다시 못 씁니다. */
@@ -123,6 +123,8 @@ const SKUS: Record<string, Sku> = {
   /* 🔴 2026-11-12 — 가림콜 차량 이용권(바로카와 같은 규칙 · 같은 권). 가림콜 앱 · aliascall.com 에서 팝니다. 매출은 '가림'으로 잡힙니다 */
   garim_car_reg:    { kind: 'baroka', baroka: 'reg',    months: 0, nominal: 0, price: 2500 },
   garim_car_change: { kind: 'baroka', baroka: 'change', months: 0, nominal: 0, price: 2500 },
+  /* 🏪 2026-11-15 단골창구 개설료 1년 (애플은 garim_dangol_1y_nr — 앱이 _nr 를 떼고 보냅니다) */
+  garim_dangol_1y: { kind: 'dangol', months: 12, nominal: 12, price: 9900 },
   baroka_g20:    { kind: 'baroka', baroka: 'g20',    months: 0, nominal: 0, price: 1100 },
   baroka_g60:    { kind: 'baroka', baroka: 'g60',    months: 0, nominal: 0, price: 2200 },    // 명의 이전 수수료(받는 분)
 };
@@ -476,6 +478,7 @@ Deno.serve(async (req) => {
         google_product_id: productId,
         google_action: sku.kind === 'emergency' ? 'emergency' : (sku.kind === 'baroka' ? 'baroka_' + sku.baroka : null),
       };
+      if (sku.kind === 'dangol') row.google_action = 'dangol';
       if (sku.kind === 'usage') {
         row.amount_minor_units = sku.price * Math.max(1, Number(info.quantity || 1));
         row.google_action = 'usage';
@@ -495,6 +498,29 @@ Deno.serve(async (req) => {
       const ins = await supabase.from('payments').insert(row).select('*').single();
       if (ins.error) return bad('결제 기록을 남기지 못했습니다: ' + ins.error.message, 500);
       pay = ins.data;
+    }
+
+    /* 🏪 2026-11-15 — 단골창구 개설료: 고른 단골창구(usageTargetId)에 1년을 넣고 끝(긴급 구독 · 체험 덤 없음).
+       내 단골창구가 아니거나 닫았으면 acknowledge 하지 않습니다 → 구글 자동 환불(애플은 고객센터). */
+    if (sku.kind === 'dangol') {
+      const { data: g, error: ge } = usageKind === 'dangol' && usageTargetId
+        ? await supabase.rpc('dg_grant_paid', { p_user: userId, p_desk: String(usageTargetId), p_months: sku.months, p_payment: pay.id, p_source: apple ? 'apple' : 'google' })
+        : { data: null, error: { message: 'no_desk' } };
+      if (ge || !g || !g.ok) {
+        console.error('[ac-google-verify] 🔴 단골창구 기간을 넣지 못했습니다:', ge?.message || g?.error);
+        await supabase.from('payments').update({ status: 'failed' }).eq('id', pay.id);
+        return reply({ ok: false, consume: false, noDesk: true, error: apple
+          ? '단골창구를 찾지 못했습니다. 고객센터로 문의해 주세요.'
+          : '단골창구를 찾지 못했습니다. 결제는 곧 자동으로 취소됩니다.' });
+      }
+      await supabase.from('payments').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', pay.id);
+      if (!apple && !info.acknowledgementState) {
+        const ack = await fetch(url + ':acknowledge', { method: 'POST',
+          headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+        if (!ack.ok) console.error('[ac-google-verify] 🔴 acknowledge 실패(단골창구):', (await ack.text()).slice(0, 300));
+      }
+      console.log('[ac-google-verify] ✓ 단골창구', productId, userId);
+      return reply({ ok: true, kind: 'dangol', months: sku.months, until: g.until });
     }
 
     /* 🔴 2026-11-03 — 바로카: 권 1장만 드리고 끝(긴급 구독 · 체험 덤 없음). 못 드리면 acknowledge 안 함 → 구글 자동 환불 */
