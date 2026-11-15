@@ -115,9 +115,19 @@ async function hub(){
   try {
     var ts = await rpc('dg_guest_threads', { p_token: token() });
     $('mine').innerHTML = ts.length ? ts.map(function(t){
-      return '<a class="li" href="dangol.html?c=' + encodeURIComponent(t.code) + '&t=' + t.id + '"><span>🏪 ' + esc(t.name) + (t.unread ? '<b class="dot">' + t.unread + '</b>' : '') + '</span><i>' + (t.unread ? '답장 왔어요' : when(t.updated_at)) + ' ›</i></a>';
+      var ad = String(t.address || t.region || '').split(' ').slice(0, 3).join(' ');   // 같은 상호 구분: 시 · 구 · 길
+      return '<a class="li" href="dangol.html?c=' + encodeURIComponent(t.code) + '&t=' + t.id + '"><span>🏪 ' + esc(t.name) + (t.unread ? '<b class="dot">' + t.unread + '</b>' : '') + (ad ? '<small style="display:block;font-weight:600;opacity:.75">' + esc(ad) + '</small>' : '') + '</span><i>' + (t.unread ? '답장 왔어요' : when(t.updated_at)) + ' ›</i></a>';
     }).join('') : '<p>아직 물어본 가게가 없어요. 가게 QR을 찍어 물어보면 여기에 남습니다.</p>';
   } catch (e) { $('mine').innerHTML = '<p>' + esc(errMsg(e)) + '</p>'; }
+}
+
+/* 📍 2026-11-15 가게 주소 → 지도 · 길찾기 (카카오맵 · 네이버 지도 · 주소 복사) */
+function mapRow(d){
+  var q = encodeURIComponent(d.address);
+  return '<div style="font-size:13px;font-weight:800;color:var(--sub);margin-top:2px">📍 길찾기</div><div class="row" style="margin-top:2px;gap:6px">' +
+    '<a class="btn g" style="flex:1;padding:10px 6px;font-size:14px;min-width:0" target="_blank" rel="noopener" href="https://map.kakao.com/link/search/' + q + '">카카오맵</a>' +
+    '<a class="btn g" style="flex:1;padding:10px 6px;font-size:14px;min-width:0" target="_blank" rel="noopener" href="https://map.naver.com/p/search/' + q + '">네이버지도</a>' +
+    '<button class="btn g" style="flex:1;padding:10px 6px;font-size:14px;min-width:0" type="button" id="cpAddr">주소 복사</button></div>';
 }
 
 /* ── 가게 한 곳 ───────────────────────────────────────── */
@@ -132,7 +142,9 @@ async function desk(code){
   h += '<div class="card shop"><div class="badges"><span class="tag" style="margin:0">🏪 단골창구</span>' + (d.category ? '<span class="pill">' + esc(d.category) + '</span>' : '') +
        (d.verified ? '<span class="pill ok">✅ 확인됨</span>' : '<span class="pill pre">확인 전</span>') + '</div>' +
        '<h2>' + esc(d.name) + '</h2>' + (d.intro ? '<div class="pre-wrap">' + esc(d.intro) + '</div>' + (risky(d.intro) ? '<div class="warn">' + WARN + '</div>' : '') : '') +
-       ((d.hours || d.region) ? '<div class="meta">' + (d.hours ? '<span>영업시간</span><span>' + esc(d.hours) + '</span>' : '') + (d.region ? '<span>지역</span><span>' + esc(d.region) + '</span>' : '') + '</div>' : '') + '</div>';
+       ((d.hours || d.region || d.address) ? '<div class="meta">' + (d.hours ? '<span>영업시간</span><span>' + esc(d.hours) + '</span>' : '') +
+         (d.address ? '<span>주소</span><span>' + esc(d.address) + (d.address_detail ? ' ' + esc(d.address_detail) : '') + '</span>' : (d.region ? '<span>지역</span><span>' + esc(d.region) + '</span>' : '')) + '</div>' : '') +
+       (d.address ? mapRow(d) : '') + '</div>';
   var items = d.items || [];
   if (items.length || d.greeting) {
     h += '<div class="card"><b class="h">🙋 자주 묻는 질문</b>' + (d.greeting ? '<p class="pre-wrap">' + esc(d.greeting) + '</p>' : '') +
@@ -151,6 +163,7 @@ async function desk(code){
   try { $('nm').value = store('dangol_name') || ''; } catch (e) {}
   $('send').onclick = send;
   $('report').onclick = report;
+  if ($('cpAddr')) $('cpAddr').onclick = function(){ var t = d.address + (d.address_detail ? ' ' + d.address_detail : ''); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ toast('주소를 복사했어요. 내비에 붙여 넣으세요.'); }, function(){ toast(t); }); };
   await loadThread(Q.get('t'));
 }
 function grams(t){ var o = {}; String(t || '').toLowerCase().replace(/[^0-9a-z가-힣]+/g, ' ').split(' ').forEach(function(w){ if (w.length === 1) o[w] = 1; for (var i = 0; i < w.length - 1; i++) o[w.substr(i, 2)] = 1; }); return o; }
