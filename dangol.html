@@ -102,16 +102,37 @@ function errMsg(e){ var c = (e && (e.error || e.message)) || ''; return ERR[c] |
 async function hub(){
   document.title = '단골창구';
   A.innerHTML = '<div class="hero"><a class="bk" href="javascript:history.length>1?history.back():location.replace(\'index.html\')" aria-label="뒤로">←</a>' +
-    '<div><span class="tag">🏪 단골창구</span><h1>가게에 바로 물어보세요</h1><p>전화번호 없이' + (DGHOST ? '' : ' · 앱 설치 없이') + '. 가게 QR을 찍거나 가게 코드를 넣어 주세요.</p></div></div>' +
-    '<div class="card"><b class="h">🔎 가게 코드로 찾기</b><p>QR 포스터 아래 적힌 6자리 코드입니다.</p>' +
-      '<div class="row"><input id="code" maxlength="6" placeholder="예) HYAASH" style="text-transform:uppercase;letter-spacing:2px;font-size:18px" aria-label="가게 코드"><button class="btn" id="go" type="button" style="flex:none;padding:0 20px">열기</button></div></div>' +
+    '<div><span class="tag">🏪 단골창구</span><h1>가게에 바로 물어보세요</h1><p>전화번호 없이' + (DGHOST ? '' : ' · 앱 설치 없이') + '. 가게 QR을 찍거나, 아래에서 가게 이름으로 찾아보세요.</p></div></div>' +
+    '<div class="card"><b class="h">🔎 가게 찾기</b><p>가게 이름(일부만 넣어도 돼요)이나 포스터의 6자리 코드를 넣으세요. 동네를 함께 넣으면 더 잘 찾아요. 예) 칼국수 권선</p>' +
+      '<form class="row" id="sf" autocomplete="off"><input id="code" type="search" maxlength="40" placeholder="가게 이름 또는 코드" style="font-size:17px;flex:1;min-width:0" aria-label="가게 이름 또는 코드"><button class="btn" id="go" type="submit" style="flex:none;padding:0 20px">찾기</button></form>' +
+      '<div id="res" style="display:flex;flex-direction:column;gap:6px"></div></div>' +
     '<div class="card"><b class="h">💬 내가 물어본 가게</b><div id="mine"><p>불러오는 중…</p></div></div>' +
     (DGHOST ? '' :   /* dangol.org 는 첫 화면에서 사장님 · 고객님을 나눠 고르므로, 고객님 화면에는 사장님 안내를 넣지 않습니다 */
     '<div class="card"><b class="h">🧑‍🍳 사장님이신가요?</b>' +
       '<p>가게 사진과 소개만 올리면 <b>바로</b> 우리 가게 단골창구가 열립니다. 손님이 QR을 찍으면 자주 묻는 질문이 먼저 답하고, 그래도 궁금하면 사장님께 묻습니다. 사장님 번호는 드러나지 않아요.</p>' +
       OWNER_CTA() + '</div>') +
     '<p class="foot">' + (DGHOST ? '단골창구 · 위브앱솔루션' : '단골창구 by 가림콜 · 위브앱솔루션') + '</p>';
-  $('go').onclick = function(){ var c = $('code').value.trim().toUpperCase(); if (c.length < 6) { toast('6자리 코드를 넣어 주세요.'); return; } location.href = 'dangol.html?c=' + encodeURIComponent(c); };
+  /* 🔎 2026-11-15 이름으로도 찾기 (13_dangol_search.sql dg_search) — 결과를 여러 개 · 주소와 함께 */
+  var sT = null, sN = 0;
+  async function find(now){
+    var q = $('code').value.trim(), box = $('res'), n = ++sN;
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    var rows = null;
+    try { rows = await rpc('dg_search', { p_q: q }); } catch (e) {
+      if (now && /^[A-Za-z0-9]{6}$/.test(q)) { location.href = 'dangol.html?c=' + encodeURIComponent(q.toUpperCase()); return; }
+      box.innerHTML = '<p>' + esc(errMsg(e)) + '</p>'; return;
+    }
+    if (n !== sN) return;   // 더 새 검색이 있음
+    if (now && rows.length === 1 && rows[0].code === q.toUpperCase()) { location.href = 'dangol.html?c=' + rows[0].code; return; }
+    box.innerHTML = rows.length ? rows.map(function(r){
+      var ad = String(r.address || r.region || '').split(' ').slice(0, 4).join(' ');
+      return '<a class="li" href="dangol.html?c=' + encodeURIComponent(r.code) + '"><span>🏪 ' + esc(r.name) +
+        ' <small style="font-weight:700;opacity:.7">' + esc(r.category || '') + (r.verified ? ' · ✅' : '') + '</small>' +
+        (ad ? '<small style="display:block;font-weight:600;opacity:.75">📍 ' + esc(ad) + '</small>' : '') + '</span><i>열기 ›</i></a>';
+    }).join('') : '<p>찾는 가게가 없어요. 이름의 일부만 넣어 보세요. 예) 「행복칼국수」 대신 「칼국수」</p>';
+  }
+  $('code').oninput = function(){ clearTimeout(sT); sT = setTimeout(function(){ find(false); }, 350); };
+  $('sf').onsubmit = function(e){ e.preventDefault(); clearTimeout(sT); if ($('code').value.trim().length < 2) { toast('가게 이름을 두 글자 이상 넣어 주세요.'); return; } find(true); };
   try {
     var ts = await rpc('dg_guest_threads', { p_token: token() });
     $('mine').innerHTML = ts.length ? ts.map(function(t){
