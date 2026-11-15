@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>단골창구</title>
+<!-- 🏪 2026-11-15 단골창구 입구 — 네 사이트(burum.kr · baronu.kr · aliascall.com · baroka.kr)에 똑같이 둡니다.
+     dangol.html?b=<가게 주소>  → 그 가게의 단골창구(aliascall.com 업체 페이지)로 바로 갑니다. 가게 QR 포스터가 이 주소입니다.
+     dangol.html                → 손님 · 사장님 입구 (찾기 · 내가 물어본 곳 · 우리 가게 단골창구 열기) -->
+<script>
+(function(){
+  var b = new URLSearchParams(location.search).get('b');
+  if (b) location.replace('https://aliascall.com/aliascall_business.html?b=' + encodeURIComponent(b));
+})();
+</script>
+<style>
+:root{ --bg:#F2F5F4; --card:#fff; --ink:#12302E; --sub:#4E6462; --line:#DCE3DE; --teal:#123F3D; --teal2:#1F6F6B; --coral:#E8734A; --tint:#E4EFEE; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#111816; --card:#1A2422; --ink:#E6EEEC; --sub:#9DB0AD; --line:#2C3A37; --tint:#1E3532; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#111816; --card:#1A2422; --ink:#E6EEEC; --sub:#9DB0AD; --line:#2C3A37; --tint:#1E3532; color-scheme:dark; }
+*{ box-sizing:border-box; } [hidden]{ display:none !important; }
+body{ margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif; font-size:16px; line-height:1.6; word-break:keep-all; }
+.w{ max-width:600px; margin:0 auto; padding:max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left)); display:flex; flex-direction:column; gap:14px; }
+.hero{ background:linear-gradient(135deg,var(--teal),var(--teal2)); color:#fff; border-radius:22px; padding:20px; display:flex; gap:12px; align-items:flex-start; }
+.hero a{ color:#fff; text-decoration:none; font-size:24px; font-weight:800; line-height:1; padding-top:2px; }
+.hero h1{ margin:0; font-size:24px; } .hero p{ margin:4px 0 0; font-size:15px; opacity:.93; }
+.tag{ display:inline-block; background:var(--coral); color:#fff; font-weight:800; font-size:12.5px; border-radius:20px; padding:2px 10px; margin-bottom:6px; }
+.card{ background:var(--card); border:1.5px solid var(--line); border-radius:18px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+.card b.h{ font-size:17.5px; }
+.card p{ margin:0; color:var(--sub); font-size:15px; }
+.btn{ display:flex; align-items:center; justify-content:center; gap:6px; border:none; border-radius:14px; padding:14px; font:inherit; font-weight:800; font-size:16px; text-decoration:none; cursor:pointer; background:var(--teal); color:#fff; }
+.btn.c{ background:var(--coral); } .btn.g{ background:var(--tint); color:var(--ink); }
+.row{ display:flex; gap:8px; } .row input{ flex:1; min-width:0; border:1.5px solid var(--line); background:var(--bg); color:var(--ink); border-radius:12px; padding:12px; font:inherit; }
+.li{ display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line); text-decoration:none; color:var(--ink); font-weight:800; }
+.li:first-child{ border-top:none; } .li span{ flex:1; } .li i{ font-style:normal; color:var(--sub); }
+ul{ margin:0; padding-left:20px; color:var(--sub); font-size:14.5px; }
+.foot{ text-align:center; font-size:13px; color:var(--sub); }
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="hero"><a href="javascript:history.length>1?history.back():location.replace('index.html')" aria-label="뒤로">←</a>
+    <div><span class="tag">🏪 단골창구</span><h1>가게에 바로 물어보세요</h1><p>전화번호 없이 · 앱 설치 없이. 가게 QR을 찍거나 아래에서 찾아보세요.</p></div></div>
+
+  <div class="card"><b class="h">🔎 가게 찾기</b>
+    <p>가게 계산대 · 출입문의 <b>단골창구 QR</b>을 휴대폰 카메라로 찍으면 바로 열립니다. QR이 없으면 이름으로 찾아보세요.</p>
+    <a class="btn" href="https://aliascall.com/aliascall_directory.html">단골창구 찾기</a></div>
+
+  <div class="card" id="mine"><b class="h">💬 내가 물어본 단골창구</b><div id="mineList"></div></div>
+
+  <div class="card"><b class="h">🧑‍🍳 사장님이신가요?</b>
+    <p>우리 가게 단골창구를 여세요. 손님이 QR을 찍으면 <b>가게가 적어 둔 자주 묻는 질문</b>이 먼저 답하고, 그래도 궁금하면 상담방으로 사장님께 물어봅니다.</p>
+    <ul><li>사장님 휴대폰 번호가 손님에게 드러나지 않습니다.</li><li>카카오 채널처럼 남의 회사가 막을 일이 없는 우리 가게 창구입니다.</li>
+      <li>가림콜 <b>업무용 프로</b>(월 9,900원~)에 <b>공개 게재 이용권</b>을 더하면 열립니다. 사업자등록 확인을 거쳐 공개됩니다.</li></ul>
+    <a class="btn c" href="https://aliascall.com/aliascall_business_register.html">우리 가게 단골창구 열기</a>
+    <a class="btn g" href="https://aliascall.com/aliascall_plans.html">업무용 프로 알아보기</a></div>
+
+  <p class="foot">단골창구 by 가림콜 · 위브앱솔루션</p>
+</div>
+<script>
+(function(){
+  var box = document.getElementById('mineList'), here = /aliascall\.com$/.test(location.hostname) || location.hostname === 'localhost';
+  var mine = [];
+  try { mine = (JSON.parse(localStorage.getItem('aliascall_my_lines') || '[]') || []).filter(function(x){ return x && x.token && !x.isOwner && x.bizSlug; }); } catch (e) {}
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
+  if (here && mine.length) {
+    box.innerHTML = mine.slice(0, 20).map(function(x){
+      return '<a class="li" href="aliascall_hotline_room.html?t=' + encodeURIComponent(x.token) + '"><span>🏪 ' + esc(x.title || x.bizSlug) + '</span><i>상담방 ›</i></a>';
+    }).join('');
+  } else if (here) {
+    box.innerHTML = '<p>아직 물어본 가게가 없어요. 가게 QR을 찍어 물어보면 여기에 남습니다.</p>';
+  } else {
+    box.innerHTML = '<p>물어본 가게의 상담방은 가림콜 사이트에 저장됩니다.</p><a class="btn g" href="https://aliascall.com/dangol.html">가림콜에서 내 단골창구 보기</a>';
+  }
+})();
+</script>
+</body>
+</html>
