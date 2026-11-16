@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>/* 🌗 주야간 */try{var _t=localStorage.getItem("dg_theme");if(_t==="dark"||_t==="light")document.documentElement.setAttribute("data-theme",_t);}catch(e){}</script>
 <title>단골창구</title>
 <!-- 🏪 2026-11-15 단골창구 — 손님 화면. 네 사이트(burum.kr · baronu.kr · aliascall.com · baroka.kr)에 똑같이 둡니다.
      dangol.html?c=<가게 코드>  → 그 가게 단골창구 (가게 소개 · 자주 묻는 질문 · 사장님께 묻기 · 신고)
@@ -55,6 +56,15 @@ summary::before{ content:'Q '; color:var(--coral); }
 .link{ background:none; border:none; color:var(--sub); font:inherit; font-size:14px; text-decoration:underline; cursor:pointer; padding:4px; }
 .toast{ position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); background:#12302E; color:#fff; padding:11px 16px; border-radius:12px; font-size:15px; max-width:calc(100% - 32px); opacity:0; transition:.25s; pointer-events:none; z-index:9; }
 .toast.on{ opacity:1; }
+.nb{ background:#FFF4EC; border-color:#F6C9B4; flex-direction:row; gap:10px; align-items:flex-start; } .nb b{ color:#7A3517; line-height:1.5; }
+.aw{ background:#EEF1F7; border-color:transparent; } .aw p{ margin:0; color:#3A4560; }
+.bz{ background:#FFF8E1; border-color:transparent; } .bz p{ margin:0; color:#7A5A00; }
+:root[data-theme="dark"] .nb{ background:#3A2418; border-color:#6B3A22; } :root[data-theme="dark"] .nb b{ color:#FFC7A8; }
+:root[data-theme="dark"] .aw{ background:#1E2536; } :root[data-theme="dark"] .aw p{ color:#C3CCE4; }
+:root[data-theme="dark"] .bz{ background:#3A2E14; } :root[data-theme="dark"] .bz p{ color:#F2C46B; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .nb{ background:#3A2418; border-color:#6B3A22; } :root:not([data-theme="light"]) .nb b{ color:#FFC7A8; }
+ :root:not([data-theme="light"]) .aw{ background:#1E2536; } :root:not([data-theme="light"]) .aw p{ color:#C3CCE4; }
+ :root:not([data-theme="light"]) .bz{ background:#3A2E14; } :root:not([data-theme="light"]) .bz p{ color:#F2C46B; } }
 </style>
 </head>
 <body>
@@ -160,9 +170,9 @@ async function desk(code){
   D = d; document.title = d.name + ' 단골창구';
   var h = '';
   /* 📢 2026-11-16 가게 공지 · 지금 상태 (14_dangol_notice_auto.sql) */
-  if (d.notice) h += '<div class="card" style="background:#FFF4EC;border-color:#F6C9B4;flex-direction:row;gap:10px;align-items:flex-start"><span style="font-size:22px">📢</span><b style="color:#7A3517;line-height:1.5">' + esc(d.notice) + '</b></div>';
-  if (d.away) h += '<div class="card" style="background:#EEF1F7;border-color:transparent"><p style="margin:0;color:#3A4560">🌙 지금은 영업시간이 아니에요' + (d.open_time ? ' (' + esc(d.open_time) + '~' + esc(d.close_time) + ')' : '') + '. 문의를 남기시면 영업시간에 답해 드려요.</p></div>';
-  else if (d.busy) h += '<div class="card" style="background:#FFF8E1;border-color:transparent"><p style="margin:0;color:#7A5A00">🔕 지금 손님이 많아 답이 조금 늦을 수 있어요. 문의는 남겨 주세요.</p></div>';
+  if (d.notice) h += '<div class="card nb"><span style="font-size:22px">📢</span><b>' + esc(d.notice) + '</b></div>';
+  if (d.away) h += '<div class="card aw"><p>🌙 지금은 영업시간이 아니에요' + (d.open_time ? ' (' + esc(d.open_time) + '~' + esc(d.close_time) + ')' : '') + '. 문의를 남기시면 영업시간에 답해 드려요.</p></div>';
+  else if (d.busy) h += '<div class="card bz"><p>🔕 지금 손님이 많아 답이 조금 늦을 수 있어요. 문의는 남겨 주세요.</p></div>';
   if (d.photo) h += '<img class="photo" src="' + esc(photoUrl(d.photo)) + '" alt="' + esc(d.name) + ' 사진">';
   h += '<div class="card shop"><div class="badges"><span class="tag" style="margin:0">🏪 단골창구</span>' + (d.category ? '<span class="pill">' + esc(d.category) + '</span>' : '') +
        (d.verified ? '<span class="pill ok">✅ 확인됨</span>' : '<span class="pill pre">확인 전</span>') + '</div>' +
@@ -288,6 +298,20 @@ function report(){
 
 var c = (Q.get('c') || '').trim().toUpperCase();
 if (Q.get('b')) {} else if (c) desk(c).catch(function(e){ A.innerHTML = '<div class="card"><b class="h">' + esc(errMsg(e)) + '</b></div>'; }); else hub();
+})();
+</script>
+<script>/* 🌗 주야간 바꾸기 단추 (2026-11-16) — 고른 값은 이 휴대폰에만 기억합니다 */
+(function(){ var R = document.documentElement;
+  function dark(){ var t = R.getAttribute('data-theme'); return t ? t === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); }
+  var b = document.createElement('button'); b.type = 'button'; b.id = 'dgTheme';
+  b.style.cssText = 'flex:none;width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line,#DCE3DE);background:var(--card,#fff);color:var(--ink,#12302E);font-size:18px;line-height:1;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.12)';
+  function paint(){ var d = dark(); b.textContent = d ? '☀️' : '🌙'; b.title = b.ariaLabel = d ? '주간 모드로' : '야간 모드로'; }
+  b.onclick = function(){ var t = dark() ? 'light' : 'dark'; R.setAttribute('data-theme', t); try { localStorage.setItem('dg_theme', t); } catch (e) {} paint(); };
+  paint(); var top = document.querySelector('.top');
+  if (top) { b.style.marginLeft = 'auto'; top.appendChild(b); }
+  else { var bar = document.createElement('div');   /* 위쪽 띠가 없는 화면: 맨 위 오른쪽에 한 줄 */
+    bar.style.cssText = 'max-width:640px;margin:0 auto -6px;padding:max(10px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));display:flex;justify-content:flex-end';
+    b.style.width = b.style.height = '34px'; b.style.fontSize = '16px'; bar.appendChild(b); document.body.insertBefore(bar, document.body.firstChild); }
 })();
 </script>
 </body>
