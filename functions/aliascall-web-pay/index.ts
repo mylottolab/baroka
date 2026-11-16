@@ -306,7 +306,7 @@ async function precheck(userId: string, sku: Sku, o: Opts): Promise<string | nul
   }
   if (sku.kind === 'dantok') {   // 💬 2026-11-17 — 내 방(방장)인지 · 갤러리는 누구나
     const { data } = await supabase.rpc('dt_can_pay', { p_user: userId, p_sku: o.sku, p_target: o.usageTargetId ? String(o.usageTargetId) : null });
-    if (!data) return '방장만 살 수 있어요. 화면을 새로 고친 뒤 다시 눌러 주세요.';
+    if (!data) return '이 방 사람만 살 수 있어요. 화면을 새로 고친 뒤 다시 눌러 주세요.';
   }
   if (sku.kind === 'dangol') {   // 🏪 2026-11-15 — 내 단골창구인지
     const { data } = o.usageTargetId ? await supabase.rpc('dg_can_pay', { p_user: userId, p_desk: String(o.usageTargetId) }) : { data: false };
