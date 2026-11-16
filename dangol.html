@@ -159,6 +159,10 @@ async function desk(code){
   if (!d || !d.ok) { A.innerHTML = '<div class="card"><b class="h">' + esc((d && d.name ? d.name + ' — ' : '') + errMsg(d)) + '</b></div><a class="btn g" href="dangol.html">단골창구 입구</a>'; return; }
   D = d; document.title = d.name + ' 단골창구';
   var h = '';
+  /* 📢 2026-11-16 가게 공지 · 지금 상태 (14_dangol_notice_auto.sql) */
+  if (d.notice) h += '<div class="card" style="background:#FFF4EC;border-color:#F6C9B4;flex-direction:row;gap:10px;align-items:flex-start"><span style="font-size:22px">📢</span><b style="color:#7A3517;line-height:1.5">' + esc(d.notice) + '</b></div>';
+  if (d.away) h += '<div class="card" style="background:#EEF1F7;border-color:transparent"><p style="margin:0;color:#3A4560">🌙 지금은 영업시간이 아니에요' + (d.open_time ? ' (' + esc(d.open_time) + '~' + esc(d.close_time) + ')' : '') + '. 문의를 남기시면 영업시간에 답해 드려요.</p></div>';
+  else if (d.busy) h += '<div class="card" style="background:#FFF8E1;border-color:transparent"><p style="margin:0;color:#7A5A00">🔕 지금 손님이 많아 답이 조금 늦을 수 있어요. 문의는 남겨 주세요.</p></div>';
   if (d.photo) h += '<img class="photo" src="' + esc(photoUrl(d.photo)) + '" alt="' + esc(d.name) + ' 사진">';
   h += '<div class="card shop"><div class="badges"><span class="tag" style="margin:0">🏪 단골창구</span>' + (d.category ? '<span class="pill">' + esc(d.category) + '</span>' : '') +
        (d.verified ? '<span class="pill ok">✅ 확인됨</span>' : '<span class="pill pre">확인 전</span>') + '</div>' +
