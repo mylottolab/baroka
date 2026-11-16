@@ -68,7 +68,8 @@ const PACKAGE = 'com.weaveapp.aliascall';
 /* 🔴 2026-11-03 — 바로카 앱(com.weaveapp.baroka)도 이 함수로 확인합니다. 상품 번호가 baroka_ 로 시작하면 바로카 앱 것 */
 const BAROKA_PACKAGE = 'com.weaveapp.baroka';
 const DANGOL_PACKAGE = 'com.weaveapp.dangol';   // 🏪 2026-11-15 단골창구 독립 앱
-function pkgOf(productId: string) { const p = String(productId || ''); return p.startsWith('baroka_') ? BAROKA_PACKAGE : p.startsWith('dangol_') ? DANGOL_PACKAGE : PACKAGE; }
+const DANTOK_PACKAGE = 'com.weaveapp.dantok';   // 💬 2026-11-17 단톡방 앱
+function pkgOf(productId: string) { const p = String(productId || ''); return p.startsWith('baroka_') ? BAROKA_PACKAGE : p.startsWith('dangol_') ? DANGOL_PACKAGE : p.startsWith('dantok_') ? DANTOK_PACKAGE : PACKAGE; }
 /* 🔴 2026-10-11 — 애플 결제를 기록할 때 쓰는 이름(payments.method) */
 const APPLE_METHOD = 'app_store';
 
@@ -76,7 +77,7 @@ const APPLE_METHOD = 'app_store';
    nominal = 상품 이름의 개월수 (3 · 6 · 12) — hotlines.duration_months 에 적습니다
    🔴 2026-09-28 — hotlines.duration_months 에는 DB 가 정한 숫자만 들어갑니다
      (hotlines_duration_months_check). 4 · 7 · 13 을 넣었다가 회선이 안 만들어졌습니다. */
-type Sku = { kind: 'emergency' | 'line' | 'pro' | 'listing' | 'usage' | 'number' | 'baroka' | 'dangol'; baroka?: 'reg' | 'change' | 'g20' | 'g60'; months: number; nominal: number; price: number; tier?: string;
+type Sku = { kind: 'emergency' | 'line' | 'pro' | 'listing' | 'usage' | 'number' | 'baroka' | 'dangol' | 'dantok'; baroka?: 'reg' | 'change' | 'g20' | 'g60'; months: number; nominal: number; price: number; tier?: string;
              persons?: 2 | 4; capGb?: number; ocrPro?: boolean };
 
 /* 🔴 화면 · Play Console 과 **같아야** 합니다. 지운 번호는 다시 못 씁니다. */
@@ -127,6 +128,11 @@ const SKUS: Record<string, Sku> = {
   /* 🏪 2026-11-15 단골창구 개설료 1년 (애플은 garim_dangol_1y_nr — 앱이 _nr 를 떼고 보냅니다) */
   garim_dangol_1y: { kind: 'dangol', months: 12, nominal: 12, price: 9900 },
   dangol_1y:       { kind: 'dangol', months: 12, nominal: 12, price: 9900 },   // 단골창구 앱(com.weaveapp.dangol) · 애플 dangol_1y_nr
+  /* 💬 2026-11-17 단톡방 앱(com.weaveapp.dantok) — 애플은 끝에 _nr. 넣는 일은 dt_grant_paid 가 합니다(usageTargetId = 방 번호) */
+  dantok_room_1y:  { kind: 'dantok', months: 12, nominal: 12, price: 9900 },
+  dantok_room_10g: { kind: 'dantok', months: 12, nominal: 12, price: 7900 },
+  dantok_gal_5g:   { kind: 'dantok', months: 12, nominal: 12, price: 4900 },
+  dantok_gal_15g:  { kind: 'dantok', months: 12, nominal: 12, price: 9900 },
   baroka_g20:    { kind: 'baroka', baroka: 'g20',    months: 0, nominal: 0, price: 1100 },
   baroka_g60:    { kind: 'baroka', baroka: 'g60',    months: 0, nominal: 0, price: 2200 },    // 명의 이전 수수료(받는 분)
 };
@@ -481,6 +487,7 @@ Deno.serve(async (req) => {
         google_action: sku.kind === 'emergency' ? 'emergency' : (sku.kind === 'baroka' ? 'baroka_' + sku.baroka : null),
       };
       if (sku.kind === 'dangol') row.google_action = 'dangol';
+      if (sku.kind === 'dantok') row.google_action = 'dantok';
       if (sku.kind === 'usage') {
         row.amount_minor_units = sku.price * Math.max(1, Number(info.quantity || 1));
         row.google_action = 'usage';
@@ -523,6 +530,26 @@ Deno.serve(async (req) => {
       }
       console.log('[ac-google-verify] ✓ 단골창구', productId, userId);
       return reply({ ok: true, kind: 'dangol', months: sku.months, until: g.until });
+    }
+
+    /* 💬 2026-11-17 — 단톡방: 방 연장 · 방 저장권 · 내 갤러리. 못 넣으면 acknowledge 안 함 → 구글 자동 환불 */
+    if (sku.kind === 'dantok') {
+      const { data: g, error: ge } = await supabase.rpc('dt_grant_paid', { p_user: userId, p_sku: productId, p_target: usageTargetId ? String(usageTargetId) : null, p_payment: pay.id, p_source: apple ? 'apple' : 'google' });
+      if (ge || !g || !g.ok) {
+        console.error('[ac-google-verify] 🔴 단톡방 이용권을 넣지 못했습니다:', ge?.message || g?.error);
+        await supabase.from('payments').update({ status: 'failed' }).eq('id', pay.id);
+        return reply({ ok: false, consume: false, noTarget: true, error: apple
+          ? '방을 찾지 못했습니다. 고객센터로 문의해 주세요.'
+          : '방을 찾지 못했습니다. 결제는 곧 자동으로 취소됩니다.' });
+      }
+      await supabase.from('payments').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', pay.id);
+      if (!apple && !info.acknowledgementState) {
+        const ack = await fetch(url + ':acknowledge', { method: 'POST',
+          headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+        if (!ack.ok) console.error('[ac-google-verify] 🔴 acknowledge 실패(단톡방):', (await ack.text()).slice(0, 300));
+      }
+      console.log('[ac-google-verify] ✓ 단톡방', productId, userId);
+      return reply({ ...g, sku: productId });
     }
 
     /* 🔴 2026-11-03 — 바로카: 권 1장만 드리고 끝(긴급 구독 · 체험 덤 없음). 못 드리면 acknowledge 안 함 → 구글 자동 환불 */

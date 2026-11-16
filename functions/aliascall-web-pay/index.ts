@@ -40,7 +40,7 @@ const PAYPAL_CLIENT_ID = Deno.env.get('PAYPAL_CLIENT_ID') || '';
 const PAYPAL_CLIENT_SECRET = Deno.env.get('PAYPAL_CLIENT_SECRET') || '';
 const PAYPAL_API = (Deno.env.get('PAYPAL_MODE') || 'sandbox') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
 
-type Sku = { kind: 'emergency' | 'line' | 'pro' | 'listing' | 'usage' | 'number' | 'baroka' | 'dangol'; baroka?: 'reg' | 'change' | 'g20' | 'g60'; months: number; nominal: number; price: number; tier?: string;
+type Sku = { kind: 'emergency' | 'line' | 'pro' | 'listing' | 'usage' | 'number' | 'baroka' | 'dangol' | 'dantok'; baroka?: 'reg' | 'change' | 'g20' | 'g60'; months: number; nominal: number; price: number; tier?: string;
              persons?: 2 | 4; capGb?: number; ocrPro?: boolean };
 
 /* 🔴 화면 · Play Console 과 **같아야** 합니다. 지운 번호는 다시 못 씁니다. */
@@ -91,6 +91,11 @@ const SKUS: Record<string, Sku> = {
   /* 🔴 2026-11-03 — 바로카 차 갤러리 액자(기한 없음) */
   garim_dangol_1y: { kind: 'dangol', months: 12, nominal: 12, price: 9900 },   // 🏪 2026-11-15 단골창구 개설료 1년
   dangol_1y:       { kind: 'dangol', months: 12, nominal: 12, price: 9900 },   // 🏪 단골창구 사이트 dangol.org
+  /* 💬 2026-11-17 단톡방 dantok.kr */
+  dantok_room_1y:  { kind: 'dantok', months: 12, nominal: 12, price: 9900 },
+  dantok_room_10g: { kind: 'dantok', months: 12, nominal: 12, price: 7900 },
+  dantok_gal_5g:   { kind: 'dantok', months: 12, nominal: 12, price: 4900 },
+  dantok_gal_15g:  { kind: 'dantok', months: 12, nominal: 12, price: 9900 },
   baroka_g20:    { kind: 'baroka', baroka: 'g20',    months: 0, nominal: 0, price: 1100 },
   baroka_g60:    { kind: 'baroka', baroka: 'g60',    months: 0, nominal: 0, price: 2200 },
 };
@@ -263,6 +268,7 @@ const NAME: Record<string, string> = {
   ac_pro_enterprise_1m: '프로 엔터프라이즈 1개월', ac_pro_enterprise_6m: '프로 엔터프라이즈 6개월', ac_pro_enterprise_12m: '프로 엔터프라이즈 12개월',
   ac_listing_1m: '공개 업체 목록 게재 1개월', ac_listing_6m: '공개 업체 목록 게재 6개월', ac_listing_12m: '공개 업체 목록 게재 12개월',
   ac_usage_1gb_3m: '추가 사용량 1GB', garim_dangol_1y: '단골창구 개설료 1년', dangol_1y: '단골창구 개설료 1년',
+  dantok_room_1y: '단톡방 이용 1년', dantok_room_10g: '단톡방 저장 10GB 1년', dantok_gal_5g: '단톡방 갤러리 5GB 1년', dantok_gal_15g: '단톡방 갤러리 15GB 1년',
   ac_num_4_basic: '회선번호 4자리', ac_num_4_good: '좋은 회선번호 4자리', ac_num_5_basic: '회선번호 5자리', ac_num_5_good: '좋은 회선번호 5자리',
   ac_num_6_basic: '회선번호 6자리', ac_num_6_good: '좋은 회선번호 6자리', ac_num_7_basic: '회선번호 7자리', ac_num_7_good: '좋은 회선번호 7자리',
   ac_num_8_good: '좋은 회선번호 8자리', ac_num_keep: '회선번호 1년 더 잡아 두기', ac_num_transfer: '회선번호 명의 이전',
@@ -298,6 +304,10 @@ async function precheck(userId: string, sku: Sku, o: Opts): Promise<string | nul
       if (!data || !data.length) return '고르신 번호를 잡아 두지 못했습니다. 번호를 다시 골라 주세요.';
     }
   }
+  if (sku.kind === 'dantok') {   // 💬 2026-11-17 — 내 방(방장)인지 · 갤러리는 누구나
+    const { data } = await supabase.rpc('dt_can_pay', { p_user: userId, p_sku: o.sku, p_target: o.usageTargetId ? String(o.usageTargetId) : null });
+    if (!data) return '방장만 살 수 있어요. 화면을 새로 고친 뒤 다시 눌러 주세요.';
+  }
   if (sku.kind === 'dangol') {   // 🏪 2026-11-15 — 내 단골창구인지
     const { data } = o.usageTargetId ? await supabase.rpc('dg_can_pay', { p_user: userId, p_desk: String(o.usageTargetId) }) : { data: false };
     if (!data) return '단골창구를 찾을 수 없습니다. 화면을 새로 고친 뒤 다시 눌러 주세요.';
@@ -325,7 +335,7 @@ function rowFor(userId: string, sku: Sku, skuId: string, o: Opts, method: string
     amount_minor_units: amountMinor, currency_code: currency, status: 'pending',
     purpose: sku.kind === 'emergency' ? 'subscription' : 'hotline',
     google_product_id: skuId,               // 상품 번호 — 구글과 같은 칸을 씁니다(웹은 method 로 구분)
-    google_action: sku.kind === 'emergency' ? 'emergency' : (sku.kind === 'usage' ? 'usage' : (sku.kind === 'baroka' ? 'baroka_' + sku.baroka : (sku.kind === 'dangol' ? 'dangol' : null))),
+    google_action: sku.kind === 'emergency' ? 'emergency' : (sku.kind === 'usage' ? 'usage' : (sku.kind === 'baroka' ? 'baroka_' + sku.baroka : (sku.kind === 'dangol' ? 'dangol' : (sku.kind === 'dantok' ? 'dantok' : null)))),
     order_opts: { ...o, qty },              // 결제 뒤 적용에 쓸 선택(회선 이름 · 연장할 회선 · 붙일 곳 …)
   };
   if (sku.kind === 'pro') { row.hotline_tier = sku.tier; row.hotline_duration_months = sku.months; row.hotline_price_krw = sku.price; }
@@ -353,6 +363,13 @@ async function fulfill(pay: any) {
     if (ge || !g || !g.ok) throw new Error('바로카 권을 드리지 못했습니다(' + (ge?.message || g?.error) + ')');
     await supabase.from('payments').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', pay.id);
     return { ok: true, kind: 'baroka', baroka: sku.baroka };
+  }
+  /* 💬 2026-11-17 — 단톡방: 방 연장 · 방 저장권 · 내 갤러리 */
+  if (sku.kind === 'dantok') {
+    const { data: g, error: ge } = await supabase.rpc('dt_grant_paid', { p_user: userId, p_sku: skuId, p_target: o.usageTargetId ? String(o.usageTargetId) : null, p_payment: pay.id, p_source: pay.method });
+    if (ge || !g || !g.ok) throw new Error('단톡방 이용권을 넣지 못했습니다(' + (ge?.message || g?.error) + '). 고객센터에서 도와드립니다.');
+    await supabase.from('payments').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', pay.id);
+    return { ...g, sku: skuId };
   }
   /* 🏪 2026-11-15 — 단골창구 개설료: 고른 단골창구에 기간만 넣고 끝 */
   if (sku.kind === 'dangol') {
@@ -403,6 +420,7 @@ async function summary(pay: any) {
   if (pay.hotline_id) { const { data } = await supabase.from('hotlines').select('invite_token').eq('id', pay.hotline_id).maybeSingle(); inv = data?.invite_token ?? null; }
   if (sku?.kind === 'baroka') return { ok: true, already: true, kind: 'baroka', baroka: sku.baroka };
   if (sku?.kind === 'dangol') return { ok: true, already: true, kind: 'dangol', months: sku.months };
+  if (sku?.kind === 'dantok') return { ok: true, already: true, kind: 'dantok', sku: pay.google_product_id };
   return { ok: true, already: true, kind: sku?.kind, months: sku?.months, hotlineId: pay.hotline_id ?? null,
            inviteToken: inv, subscriptionId: pay.hotline_subscription_id ?? null };
 }
@@ -426,6 +444,9 @@ function back(params: Record<string, unknown>) {
   /* 🔴 2026-11-01 — 회선번호 결제는 번호 화면으로 돌아갑니다 */
   const page = (params.kind === 'number' || String(params.sku || '').startsWith('ac_num_')) ? '/aliascall_numbers.html?' : '/aliascall_plans.html?';
   /* 🏪 2026-11-15 — 단골창구 개설료는 사장님 화면으로 돌아갑니다 */
+  if (String(params.sku || '').startsWith('dantok_')) {   // 💬 단톡방은 dantok.kr 결제 마무리 화면으로
+    return new Response(null, { status: 302, headers: { Location: 'https://dantok.kr/paid.html?' + q.toString() } });
+  }
   if (String(params.sku || '').startsWith('dangol_')) {   // dangol.org 에서 산 것은 dangol.org 로
     return new Response(null, { status: 302, headers: { Location: 'https://dangol.org/dangol_owner.html?' + q.toString() } });
   }
@@ -454,7 +475,7 @@ Deno.serve(async (req) => {
     try {
       const f = await req.formData();
       const st = String(f.get('P_STATUS') || ''), oid = String(f.get('P_OID') || '');
-      if (st !== '00') return back({ webpaid: 0, sku: oid.startsWith('DGOR_') ? 'dangol_1y' : oid.startsWith('DGCH_') ? 'garim_dangol_1y' : oid.startsWith('GRCA_') ? 'garim_car_reg' : oid.startsWith('BRKA_') ? (oid.includes('_G_') ? 'baroka_g20' : 'baroka_reg') : null, msg: String(f.get('P_RMESG') || '결제를 마치지 못했습니다') });
+      if (st !== '00') return back({ webpaid: 0, sku: oid.startsWith('DTOK_') ? 'dantok_room_1y' : oid.startsWith('DGOR_') ? 'dangol_1y' : oid.startsWith('DGCH_') ? 'garim_dangol_1y' : oid.startsWith('GRCA_') ? 'garim_car_reg' : oid.startsWith('BRKA_') ? (oid.includes('_G_') ? 'baroka_g20' : 'baroka_reg') : null, msg: String(f.get('P_RMESG') || '결제를 마치지 못했습니다') });
       const { data: pay } = await supabase.from('payments').select('*').eq('external_payment_id', oid).maybeSingle();
       if (!pay) return back({ webpaid: 0, msg: '주문 정보를 찾을 수 없습니다' });
       if (pay.status === 'completed') return back({ webpaid: 1, sku: pay.google_product_id, ...(await summary(pay)) });
@@ -518,16 +539,16 @@ Deno.serve(async (req) => {
       const qty = sku.kind === 'usage' ? Math.min(10, Math.max(1, Number(o.qty || 1))) : 1;
       const amount = sku.price * qty;
       const ts = Date.now().toString();
-      const oid = (skuId.startsWith('dangol_') ? 'DGOR_WP_' : skuId.startsWith('garim_dangol') ? 'DGCH_WP_' : skuId.startsWith('garim_car') ? 'GRCA_WP_' : sku.kind === 'baroka' ? (/^g/.test(sku.baroka || '') ? 'BRKA_G_' : 'BRKA_WP_') : 'ALCL_WP_') + ts + '_' + Math.random().toString(36).slice(2, 6);
+      const oid = (skuId.startsWith('dantok_') ? 'DTOK_WP_' : skuId.startsWith('dangol_') ? 'DGOR_WP_' : skuId.startsWith('garim_dangol') ? 'DGCH_WP_' : skuId.startsWith('garim_car') ? 'GRCA_WP_' : sku.kind === 'baroka' ? (/^g/.test(sku.baroka || '') ? 'BRKA_G_' : 'BRKA_WP_') : 'ALCL_WP_') + ts + '_' + Math.random().toString(36).slice(2, 6);
       const { row } = rowFor(userId, sku, skuId, o, 'inicis_card', oid, amount, 'KRW');
       const ins = await supabase.from('payments').insert(row);
       if (ins.error) return bad('결제 준비 중 오류: ' + ins.error.message, 500);
       return reply({
         mid: MID, oid, amt: String(amount), timestamp: ts,
         chkfake: await sha512b64(String(amount) + oid + ts + HASH_KEY),
-        goodname: (sku.kind === 'baroka' ? '' : 'Aliascall ') + (NAME[skuId] || skuId) + (qty > 1 ? ' × ' + qty : ''),
+        goodname: (sku.kind === 'baroka' || sku.kind === 'dantok' ? '' : 'Aliascall ') + (NAME[skuId] || skuId) + (qty > 1 ? ' × ' + qty : ''),
         buyername: String(body.buyername || '회원'), buyertel: String(body.buyertel || ''), buyeremail: String(body.buyeremail || ''),
-        nextUrl: FN_URL, notiUrl: FN_URL, closeUrl: skuId.startsWith('dangol_') ? 'https://dangol.org/dangol_owner.html' : skuId.startsWith('garim_dangol') ? SITE + '/dangol_owner.html' : skuId.startsWith('garim_car') ? SITE + '/aliascall_my_account.html' : sku.kind === 'baroka' ? BAROKA_SITE + (/^g/.test(sku.baroka || '') ? '/gallery.html?mine=1' : '/my.html') : SITE + (sku.kind === 'number' ? '/aliascall_numbers.html' : '/aliascall_plans.html'),
+        nextUrl: FN_URL, notiUrl: FN_URL, closeUrl: skuId.startsWith('dantok_') ? 'https://dantok.kr/paid.html?webpaid=0&sku=' + skuId : skuId.startsWith('dangol_') ? 'https://dangol.org/dangol_owner.html' : skuId.startsWith('garim_dangol') ? SITE + '/dangol_owner.html' : skuId.startsWith('garim_car') ? SITE + '/aliascall_my_account.html' : sku.kind === 'baroka' ? BAROKA_SITE + (/^g/.test(sku.baroka || '') ? '/gallery.html?mine=1' : '/my.html') : SITE + (sku.kind === 'number' ? '/aliascall_numbers.html' : '/aliascall_plans.html'),
       });
     }
 
