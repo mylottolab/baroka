@@ -85,6 +85,13 @@ function OWNER_CTA(){
   if (otherApp) return '<p>사장님은 <b>「단골창구」 앱</b>(플레이 스토어에서 「단골창구」 검색)이나 <b>가림콜</b> 앱의 「내 계정 → 🏪 단골창구」에서 우리 가게 단골창구를 여실 수 있어요.</p>';
   return '<p><b>개설료 1년 9,900원</b> · 처음 30일 무료</p><a class="btn c" href="' + (DGHOST ? 'dangol_owner.html' : 'https://aliascall.com/dangol_owner.html') + '">우리 가게 단골창구 열기</a>';
 }
+/* 🌐 2026-11-17 손님 화면 영어 — 휴대폰 언어가 한국어가 아니면 영어로 (위쪽 「EN/한」 단추로 바꿀 수 있음).
+   가게 이름 · 소개 · 자주 묻는 질문은 사장님이 쓴 그대로(한국어) 보입니다. */
+var EN = (function(){ var v = null; try { v = localStorage.getItem('dangol_lang'); } catch (e) {} if (v) return v === 'en'; return !/^ko/i.test(navigator.language || 'ko'); })();
+document.documentElement.lang = EN ? 'en' : 'ko';
+function T(ko, en){ return EN ? en : ko; }
+window.__dgLang = function(){ try { localStorage.setItem('dangol_lang', EN ? 'ko' : 'en'); } catch (e) {} location.reload(); };
+window.__dgEN = EN;
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
 function toast(t){ var e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(function(){ e.classList.remove('on'); }, 3000); }
@@ -102,26 +109,28 @@ function when(t){ var d = new Date(t); var k = new Date(d.getTime() + 9 * 3600e3
 function photoUrl(p){ return p ? URL0 + '/storage/v1/object/public/dangol/' + p.split('/').map(encodeURIComponent).join('/') : ''; }
 /* 계좌번호 · 링크가 보이면 경고 (링크는 누를 수 없게 글자로만 보여 줍니다) */
 function risky(t){ t = String(t || ''); return /(https?:\/\/|www\.|[a-z0-9-]+\.(com|co\.kr|kr|net|io|me|ly|link|page|site)\b)/i.test(t) || /\d{2,6}[- ]\d{2,6}[- ]\d{2,8}/.test(t) || /\d{11,16}/.test(t.replace(/[- ]/g, '')) && /계좌|입금|송금|이체|은행/.test(t) || /계좌|입금해|송금해|이체해/.test(t); }
-var WARN = '⚠ 계좌번호 · 링크가 들어 있어요. 돈을 보내기 전에 꼭 가게에 직접 확인하세요. 이상하면 아래 「신고하기」를 눌러 주세요.';
+var WARN = T('⚠ 계좌번호 · 링크가 들어 있어요. 돈을 보내기 전에 꼭 가게에 직접 확인하세요. 이상하면 아래 「신고하기」를 눌러 주세요.', '⚠ This contains an account number or link. Check with the shop in person before sending money. If something feels wrong, tap “Report” below.');
 async function rpc(fn, args){ var r = await sb.rpc(fn, args || {}); if (r.error) throw r.error; return r.data; }
-var ERR = { not_found: '가게를 찾지 못했어요. 코드를 다시 확인해 주세요.', suspended: '지금은 문의를 받을 수 없는 가게입니다.', paused: '이 가게 단골창구는 잠시 쉬는 중입니다.',
+var ERR = EN ? { not_found: 'Shop not found. Please check the code.', suspended: 'This shop is not taking questions right now.', paused: 'This shop is taking a short break.',
+            closed: 'This shop is not taking questions right now.', too_many: 'Please try again in a moment.', too_long: 'Up to 1,000 characters.', token: 'Could not send — this browser blocks storage.' }
+          : { not_found: '가게를 찾지 못했어요. 코드를 다시 확인해 주세요.', suspended: '지금은 문의를 받을 수 없는 가게입니다.', paused: '이 가게 단골창구는 잠시 쉬는 중입니다.',
             closed: '이 가게 단골창구는 지금 문의를 받지 않아요.', too_many: '잠시 뒤에 다시 보내 주세요.', too_long: '1,000자까지 보낼 수 있어요.', token: '이 휴대폰에서 저장 공간을 쓸 수 없어 보내지 못했어요.' };
-function errMsg(e){ var c = (e && (e.error || e.message)) || ''; return ERR[c] || (/dg_|function|schema/.test(c) ? '단골창구를 준비 중입니다. 잠시 후 다시 열어 주세요.' : '잠시 문제가 있었어요. 다시 해 주세요.'); }
+function errMsg(e){ var c = (e && (e.error || e.message)) || ''; return ERR[c] || (/dg_|function|schema/.test(c) ? T('단골창구를 준비 중입니다. 잠시 후 다시 열어 주세요.', 'Dangol is getting ready. Please open it again in a moment.') : T('잠시 문제가 있었어요. 다시 해 주세요.', 'Something went wrong. Please try again.')); }
 
 /* ── 입구 ─────────────────────────────────────────────── */
 async function hub(){
-  document.title = '단골창구';
+  document.title = T('단골창구', 'Dangol — Ask the shop');
   A.innerHTML = '<div class="hero"><a class="bk" href="javascript:history.length>1?history.back():location.replace(\'index.html\')" aria-label="뒤로">←</a>' +
-    '<div><span class="tag">🏪 단골창구</span><h1>가게에 바로 물어보세요</h1><p>전화번호 없이' + (DGHOST ? '' : ' · 앱 설치 없이') + '. 가게 QR을 찍거나, 아래에서 가게 이름으로 찾아보세요.</p></div></div>' +
-    '<div class="card"><b class="h">🔎 가게 찾기</b><p>가게 이름(일부만 넣어도 돼요)이나 포스터의 6자리 코드를 넣으세요. 동네를 함께 넣으면 더 잘 찾아요. 예) 칼국수 권선</p>' +
-      '<form class="row" id="sf" autocomplete="off"><input id="code" type="search" maxlength="40" placeholder="가게 이름 또는 코드" style="font-size:17px;flex:1;min-width:0" aria-label="가게 이름 또는 코드"><button class="btn" id="go" type="submit" style="flex:none;padding:0 20px">찾기</button></form>' +
+    '<div><span class="tag">🏪 ' + T('단골창구', 'Dangol') + '</span><h1>' + T('가게에 바로 물어보세요', 'Ask the shop directly') + '</h1><p>' + T('전화번호 없이' + (DGHOST ? '' : ' · 앱 설치 없이') + '. 가게 QR을 찍거나, 아래에서 가게 이름으로 찾아보세요.', 'No phone number needed. Scan the shop’s QR code, or search for the shop below.') + '</p></div></div>' +
+    '<div class="card"><b class="h">🔎 ' + T('가게 찾기', 'Find a shop') + '</b><p>' + T('가게 이름(일부만 넣어도 돼요)이나 포스터의 6자리 코드를 넣으세요. 동네를 함께 넣으면 더 잘 찾아요. 예) 칼국수 권선', 'Enter the 6-character code on the shop’s poster, or the shop name in Korean.') + '</p>' +
+      '<form class="row" id="sf" autocomplete="off"><input id="code" type="search" maxlength="40" placeholder="' + T('가게 이름 또는 코드', 'Shop code or name') + '" style="font-size:17px;flex:1;min-width:0" aria-label="' + T('가게 이름 또는 코드', 'Shop code or name') + '"><button class="btn" id="go" type="submit" style="flex:none;padding:0 20px">' + T('찾기', 'Search') + '</button></form>' +
       '<div id="res" style="display:flex;flex-direction:column;gap:6px"></div></div>' +
-    '<div class="card"><b class="h">💬 내가 물어본 가게</b><div id="mine"><p>불러오는 중…</p></div></div>' +
+    '<div class="card"><b class="h">💬 ' + T('내가 물어본 가게', 'Shops I asked') + '</b><div id="mine"><p>' + T('불러오는 중…', 'Loading…') + '</p></div></div>' +
     (DGHOST ? '' :   /* dangol.org 는 첫 화면에서 사장님 · 고객님을 나눠 고르므로, 고객님 화면에는 사장님 안내를 넣지 않습니다 */
-    '<div class="card"><b class="h">🧑‍🍳 사장님이신가요?</b>' +
-      '<p>가게 사진과 소개만 올리면 <b>바로</b> 우리 가게 단골창구가 열립니다. 손님이 QR을 찍으면 자주 묻는 질문이 먼저 답하고, 그래도 궁금하면 사장님께 묻습니다. 사장님 번호는 드러나지 않아요.</p>' +
-      OWNER_CTA() + '</div>') +
-    '<p class="foot">' + (DGHOST ? '단골창구 · 위브앱솔루션' : '단골창구 by 가림콜 · 위브앱솔루션') + '</p>';
+    (EN ? '' : '<div class="card"><b class="h">🧑‍🍳 사장님이신가요?</b>') +
+      (EN ? '' : '<p>가게 사진과 소개만 올리면 <b>바로</b> 우리 가게 단골창구가 열립니다. 손님이 QR을 찍으면 자주 묻는 질문이 먼저 답하고, 그래도 궁금하면 사장님께 묻습니다. 사장님 번호는 드러나지 않아요.</p>') +
+      (EN ? '' : OWNER_CTA() + '</div>')) +
+    '<p class="foot">' + T(DGHOST ? '단골창구 · 위브앱솔루션' : '단골창구 by 가림콜 · 위브앱솔루션', 'Dangol · WeaveApp Solution') + '</p>';
   /* 🔎 2026-11-15 이름으로도 찾기 (13_dangol_search.sql dg_search) — 결과를 여러 개 · 주소와 함께 */
   var sT = null, sN = 0;
   async function find(now){
@@ -138,67 +147,69 @@ async function hub(){
       var ad = String(r.address || r.region || '').split(' ').slice(0, 4).join(' ');
       return '<a class="li" href="dangol.html?c=' + encodeURIComponent(r.code) + '"><span>🏪 ' + esc(r.name) +
         ' <small style="font-weight:700;opacity:.7">' + esc(r.category || '') + (r.verified ? ' · ✅' : '') + '</small>' +
-        (ad ? '<small style="display:block;font-weight:600;opacity:.75">📍 ' + esc(ad) + '</small>' : '') + '</span><i>열기 ›</i></a>';
-    }).join('') : '<p>찾는 가게가 없어요. 이름의 일부만 넣어 보세요. 예) 「행복칼국수」 대신 「칼국수」</p>';
+        (ad ? '<small style="display:block;font-weight:600;opacity:.75">📍 ' + esc(ad) + '</small>' : '') + '</span><i>' + T('열기', 'Open') + ' ›</i></a>';
+    }).join('') : '<p>' + T('찾는 가게가 없어요. 이름의 일부만 넣어 보세요. 예) 「행복칼국수」 대신 「칼국수」', 'No shop found. Try the 6-character code on the poster.') + '</p>';
   }
   $('code').oninput = function(){ clearTimeout(sT); sT = setTimeout(function(){ find(false); }, 350); };
-  $('sf').onsubmit = function(e){ e.preventDefault(); clearTimeout(sT); if ($('code').value.trim().length < 2) { toast('가게 이름을 두 글자 이상 넣어 주세요.'); return; } find(true); };
+  $('sf').onsubmit = function(e){ e.preventDefault(); clearTimeout(sT); if ($('code').value.trim().length < 2) { toast(T('가게 이름을 두 글자 이상 넣어 주세요.', 'Please enter at least 2 characters.')); return; } find(true); };
   try {
     var ts = await rpc('dg_guest_threads', { p_token: token() });
     $('mine').innerHTML = ts.length ? ts.map(function(t){
       var ad = String(t.address || t.region || '').split(' ').slice(0, 3).join(' ');   // 같은 상호 구분: 시 · 구 · 길
-      return '<a class="li" href="dangol.html?c=' + encodeURIComponent(t.code) + '&t=' + t.id + '"><span>🏪 ' + esc(t.name) + (t.unread ? '<b class="dot">' + t.unread + '</b>' : '') + (ad ? '<small style="display:block;font-weight:600;opacity:.75">' + esc(ad) + '</small>' : '') + '</span><i>' + (t.unread ? '답장 왔어요' : when(t.updated_at)) + ' ›</i></a>';
-    }).join('') : '<p>아직 물어본 가게가 없어요. 가게 QR을 찍어 물어보면 여기에 남습니다.</p>';
+      return '<a class="li" href="dangol.html?c=' + encodeURIComponent(t.code) + '&t=' + t.id + '"><span>🏪 ' + esc(t.name) + (t.unread ? '<b class="dot">' + t.unread + '</b>' : '') + (ad ? '<small style="display:block;font-weight:600;opacity:.75">' + esc(ad) + '</small>' : '') + '</span><i>' + (t.unread ? T('답장 왔어요', 'New reply') : when(t.updated_at)) + ' ›</i></a>';
+    }).join('') : '<p>' + T('아직 물어본 가게가 없어요. 가게 QR을 찍어 물어보면 여기에 남습니다.', 'No questions yet. Scan a shop’s QR code and ask — it will show up here.') + '</p>';
   } catch (e) { $('mine').innerHTML = '<p>' + esc(errMsg(e)) + '</p>'; }
 }
 
 /* 📍 2026-11-15 가게 주소 → 지도 · 길찾기 (카카오맵 · 네이버 지도 · 주소 복사) */
 function mapRow(d){
   var q = encodeURIComponent(d.address);
-  return '<div style="font-size:13px;font-weight:800;color:var(--sub);margin-top:2px">📍 길찾기</div><div class="row" style="margin-top:2px;gap:6px">' +
-    '<a class="btn g" style="flex:1;padding:10px 6px;font-size:14px;min-width:0" target="_blank" rel="noopener" href="https://map.kakao.com/link/search/' + q + '">카카오맵</a>' +
-    '<a class="btn g" style="flex:1;padding:10px 6px;font-size:14px;min-width:0" target="_blank" rel="noopener" href="https://map.naver.com/p/search/' + q + '">네이버지도</a>' +
-    '<button class="btn g" style="flex:1;padding:10px 6px;font-size:14px;min-width:0" type="button" id="cpAddr">주소 복사</button></div>';
+  return '<div style="font-size:13px;font-weight:800;color:var(--sub);margin-top:2px">📍 ' + T('길찾기', 'Directions') + '</div><div class="row" style="margin-top:2px;gap:6px">' +
+    (EN ? '<a class="btn g" style="flex:1;padding:10px 6px;font-size:14px;min-width:0" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + q + '">Google Maps</a>' : '') +
+    '<a class="btn g" style="flex:1;padding:10px 6px;font-size:14px;min-width:0" target="_blank" rel="noopener" href="https://map.kakao.com/link/search/' + q + '">' + T('카카오맵', 'Kakao Map') + '</a>' +
+    '<a class="btn g" style="flex:1;padding:10px 6px;font-size:14px;min-width:0" target="_blank" rel="noopener" href="https://map.naver.com/p/search/' + q + '">' + T('네이버지도', 'Naver Map') + '</a>' +
+    '<button class="btn g" style="flex:1;padding:10px 6px;font-size:14px;min-width:0" type="button" id="cpAddr">' + T('주소 복사', 'Copy') + '</button></div>';
 }
 
 /* ── 가게 한 곳 ───────────────────────────────────────── */
 var D = null, TH = null;
 async function desk(code){
   var d;
-  try { d = await rpc('dg_desk', { p_code: code }); } catch (e) { A.innerHTML = '<div class="card"><b class="h">' + esc(errMsg(e)) + '</b></div><a class="btn g" href="dangol.html">단골창구 입구</a>'; return; }
-  if (!d || !d.ok) { A.innerHTML = '<div class="card"><b class="h">' + esc((d && d.name ? d.name + ' — ' : '') + errMsg(d)) + '</b></div><a class="btn g" href="dangol.html">단골창구 입구</a>'; return; }
-  D = d; document.title = d.name + ' 단골창구';
+  try { d = await rpc('dg_desk', { p_code: code }); } catch (e) { A.innerHTML = '<div class="card"><b class="h">' + esc(errMsg(e)) + '</b></div><a class="btn g" href="dangol.html">' + T('단골창구 입구', 'Dangol home') + '</a>'; return; }
+  if (!d || !d.ok) { A.innerHTML = '<div class="card"><b class="h">' + esc((d && d.name ? d.name + ' — ' : '') + errMsg(d)) + '</b></div><a class="btn g" href="dangol.html">' + T('단골창구 입구', 'Dangol home') + '</a>'; return; }
+  D = d; document.title = d.name + T(' 단골창구', ' — Dangol');
   var h = '';
   /* 📢 2026-11-16 가게 공지 · 지금 상태 (14_dangol_notice_auto.sql) */
   if (d.notice) h += '<div class="card nb"><span style="font-size:22px">📢</span><b>' + esc(d.notice) + '</b></div>';
-  if (d.away) h += '<div class="card aw"><p>🌙 지금은 영업시간이 아니에요' + (d.open_time ? ' (' + esc(d.open_time) + '~' + esc(d.close_time) + ')' : '') + '. 문의를 남기시면 영업시간에 답해 드려요.</p></div>';
-  else if (d.busy) h += '<div class="card bz"><p>🔕 지금 손님이 많아 답이 조금 늦을 수 있어요. 문의는 남겨 주세요.</p></div>';
-  if (d.photo) h += '<img class="photo" src="' + esc(photoUrl(d.photo)) + '" alt="' + esc(d.name) + ' 사진">';
-  h += '<div class="card shop"><div class="badges"><span class="tag" style="margin:0">🏪 단골창구</span>' + (d.category ? '<span class="pill">' + esc(d.category) + '</span>' : '') +
-       (d.verified ? '<span class="pill ok">✅ 확인됨</span>' : '<span class="pill pre">확인 전</span>') + '</div>' +
+  if (d.away) h += '<div class="card aw"><p>🌙 ' + T('지금은 영업시간이 아니에요', 'The shop is closed now') + (d.open_time ? ' (' + esc(d.open_time) + '~' + esc(d.close_time) + ')' : '') + T('. 문의를 남기시면 영업시간에 답해 드려요.', '. Leave your question and the owner will answer during opening hours.') + '</p></div>';
+  else if (d.busy) h += '<div class="card bz"><p>🔕 ' + T('지금 손님이 많아 답이 조금 늦을 수 있어요. 문의는 남겨 주세요.', 'It’s busy right now, so replies may take a little longer. Please leave your question.') + '</p></div>';
+  if (EN) h += '<div class="card" style="gap:6px"><p>🌐 <b>The shop’s information below is written by the owner in Korean.</b> You can ask in English — short, simple sentences work best. <a href="https://translate.google.com/translate?sl=ko&tl=en&u=' + encodeURIComponent(location.href) + '" target="_blank" rel="noopener">Translate this page ›</a></p></div>';
+  if (d.photo) h += '<img class="photo" src="' + esc(photoUrl(d.photo)) + '" alt="' + esc(d.name) + T(' 사진', ' photo') + '">';
+  h += '<div class="card shop"><div class="badges"><span class="tag" style="margin:0">🏪 ' + T('단골창구', 'Dangol') + '</span>' + (d.category ? '<span class="pill">' + esc(d.category) + '</span>' : '') +
+       (d.verified ? '<span class="pill ok">✅ ' + T('확인됨', 'Verified') + '</span>' : '<span class="pill pre">' + T('확인 전', 'Not verified') + '</span>') + '</div>' +
        '<h2>' + esc(d.name) + '</h2>' + (d.intro ? '<div class="pre-wrap">' + esc(d.intro) + '</div>' + (risky(d.intro) ? '<div class="warn">' + WARN + '</div>' : '') : '') +
-       ((d.hours || d.region || d.address) ? '<div class="meta">' + (d.hours ? '<span>영업시간</span><span>' + esc(d.hours) + '</span>' : '') +
-         (d.address ? '<span>주소</span><span>' + esc(d.address) + (d.address_detail ? ' ' + esc(d.address_detail) : '') + '</span>' : (d.region ? '<span>지역</span><span>' + esc(d.region) + '</span>' : '')) + '</div>' : '') +
+       ((d.hours || d.region || d.address) ? '<div class="meta">' + (d.hours ? '<span>' + T('영업시간', 'Hours') + '</span><span>' + esc(d.hours) + '</span>' : '') +
+         (d.address ? '<span>' + T('주소', 'Address') + '</span><span>' + esc(d.address) + (d.address_detail ? ' ' + esc(d.address_detail) : '') + '</span>' : (d.region ? '<span>' + T('지역', 'Area') + '</span><span>' + esc(d.region) + '</span>' : '')) + '</div>' : '') +
        (d.address ? mapRow(d) : '') + '</div>';
   var items = d.items || [];
   if (items.length || d.greeting) {
-    h += '<div class="card"><b class="h">🙋 자주 묻는 질문</b>' + (d.greeting ? '<p class="pre-wrap">' + esc(d.greeting) + '</p>' : '') +
-      (items.length > 3 ? '<input id="fq" type="search" placeholder="예) 주차 · 예약 · 포장" aria-label="찾을 말">' : '') + '<div id="faq" style="display:flex;flex-direction:column;gap:7px"></div></div>';
+    h += '<div class="card"><b class="h">🙋 ' + T('자주 묻는 질문', 'FAQ (from the owner)') + '</b>' + (d.greeting ? '<p class="pre-wrap">' + esc(d.greeting) + '</p>' : '') +
+      (items.length > 3 ? '<input id="fq" type="search" placeholder="' + T('예) 주차 · 예약 · 포장', 'Search (Korean words)') + '" aria-label="' + T('찾을 말', 'Search') + '">' : '') + '<div id="faq" style="display:flex;flex-direction:column;gap:7px"></div></div>';
   }
   h += '<div id="thread"></div>' +
-    '<div class="card" id="askCard"><b class="h">💬 사장님께 묻기</b><p>전화번호는 필요 없어요. 사장님이 답하면 이 화면과 「단골창구 입구 → 내가 물어본 가게」에서 보입니다.</p>' +
-      '<input id="nm" maxlength="20" placeholder="부를 이름 (선택 · 예: 3번 테이블, 김OO)" aria-label="부를 이름">' +
-      '<textarea id="body" maxlength="1000" placeholder="예) 오늘 저녁 6시에 4명 자리 있을까요?" aria-label="물어볼 내용"></textarea>' +
-      '<button class="btn c" id="send" type="button">보내기</button></div>' +
-    '<div style="text-align:center"><button class="link" id="report" type="button">🚩 이 가게 신고하기</button></div>' +
-    '<p class="foot"><a href="dangol.html" style="color:inherit">단골창구 입구</a> · ' + (DGHOST ? '단골창구 · dangol.org' : '단골창구 by 가림콜') + '</p>';
+    '<div class="card" id="askCard"><b class="h">💬 ' + T('사장님께 묻기', 'Ask the owner') + '</b><p>' + T('전화번호는 필요 없어요. 사장님이 답하면 이 화면과 「단골창구 입구 → 내가 물어본 가게」에서 보입니다.', 'No phone number needed. The owner’s reply will appear on this page and in “Shops I asked” on the Dangol home.') + '</p>' +
+      '<input id="nm" maxlength="20" placeholder="' + T('부를 이름 (선택 · 예: 3번 테이블, 김OO)', 'Your name (optional, e.g. Table 3, Emma)') + '" aria-label="' + T('부를 이름', 'Your name') + '">' +
+      '<textarea id="body" maxlength="1000" placeholder="' + T('예) 오늘 저녁 6시에 4명 자리 있을까요?', 'e.g. Do you have a table for 4 at 6 pm today?') + '" aria-label="' + T('물어볼 내용', 'Your question') + '"></textarea>' +
+      '<button class="btn c" id="send" type="button">' + T('보내기', 'Send') + '</button></div>' +
+    '<div style="text-align:center"><button class="link" id="report" type="button">🚩 ' + T('이 가게 신고하기', 'Report this shop') + '</button></div>' +
+    '<p class="foot"><a href="dangol.html" style="color:inherit">' + T('단골창구 입구', 'Dangol home') + '</a> · ' + T(DGHOST ? '단골창구 · dangol.org' : '단골창구 by 가림콜', 'Dangol · dangol.org') + '</p>';
   A.innerHTML = h;
   if (items.length) faq(items, '');
   var fq = $('fq'); if (fq) fq.oninput = function(){ faq(items, fq.value.trim()); };
   try { $('nm').value = store('dangol_name') || ''; } catch (e) {}
   $('send').onclick = send;
   $('report').onclick = report;
-  if ($('cpAddr')) $('cpAddr').onclick = function(){ var t = d.address + (d.address_detail ? ' ' + d.address_detail : ''); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ toast('주소를 복사했어요. 내비에 붙여 넣으세요.'); }, function(){ toast(t); }); };
+  if ($('cpAddr')) $('cpAddr').onclick = function(){ var t = d.address + (d.address_detail ? ' ' + d.address_detail : ''); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ toast(T('주소를 복사했어요. 내비에 붙여 넣으세요.', 'Address copied. Paste it into your map app.')); }, function(){ toast(t); }); };
   await loadThread(Q.get('t'));
 }
 function grams(t){ var o = {}; String(t || '').toLowerCase().replace(/[^0-9a-z가-힣]+/g, ' ').split(' ').forEach(function(w){ if (w.length === 1) o[w] = 1; for (var i = 0; i < w.length - 1; i++) o[w.substr(i, 2)] = 1; }); return o; }
@@ -214,7 +225,7 @@ function faq(items, q){
   }
   var box = $('faq');
   box.innerHTML = rows.length ? rows.map(function(it, i){ return '<details' + (q && i === 0 ? ' open' : '') + '><summary>' + esc(it.q) + '</summary><div class="ans pre-wrap">' + esc(it.a) + '</div>' + (risky(it.a) ? '<div class="warn" style="margin:0 12px 12px">' + WARN + '</div>' : '') + '</details>'; }).join('')
-    : '<p>「' + esc(q) + '」에 맞는 답이 없어요. 아래에서 사장님께 물어보세요.</p>';
+    : '<p>' + T('「' + esc(q) + '」에 맞는 답이 없어요. 아래에서 사장님께 물어보세요.', 'No matching answer for “' + esc(q) + '”. Ask the owner below.') + '</p>';
 }
 async function loadThread(prefer){
   var ts = [];
@@ -222,11 +233,11 @@ async function loadThread(prefer){
   TH = ts.filter(function(t){ return t.id === prefer; })[0] || ts.filter(function(t){ return t.status !== 'closed'; })[0] || null;
   var box = $('thread');
   if (!TH) { box.innerHTML = ''; return; }
-  box.innerHTML = '<div class="card"><b class="h">📮 사장님과 나눈 이야기</b><div class="msgs">' + TH.msgs.map(function(m){
-    return '<div class="m ' + (m.o ? 'o' : 'me') + '"><small>' + (m.o ? '🧑‍🍳 사장님' : '나') + ' · ' + when(m.t) + '</small><div class="pre-wrap">' + esc(m.b) + '</div>' +
+  box.innerHTML = '<div class="card"><b class="h">📮 ' + T('사장님과 나눈 이야기', 'Your conversation with the owner') + '</b><div class="msgs">' + TH.msgs.map(function(m){
+    return '<div class="m ' + (m.o ? 'o' : 'me') + '"><small>' + (m.o ? '🧑‍🍳 ' + T('사장님', 'Owner') : T('나', 'Me')) + ' · ' + when(m.t) + '</small><div class="pre-wrap">' + esc(m.b) + '</div>' +
       (m.o && risky(m.b) ? '<div class="warn" style="margin-top:6px">' + WARN + '</div>' : '') + '</div>';
-  }).join('') + '</div>' + (TH.status === 'open' ? '<p>사장님이 확인하면 여기에 답이 보여요.</p>' : '') + '<div id="gpush"></div></div>';
-  $('askCard').querySelector('b').textContent = '💬 이어서 묻기';
+  }).join('') + '</div>' + (TH.status === 'open' ? '<p>' + T('사장님이 확인하면 여기에 답이 보여요.', 'The owner’s reply will appear here.') + '</p>' : '') + '<div id="gpush"></div></div>';
+  $('askCard').querySelector('b').textContent = '💬 ' + T('이어서 묻기', 'Ask more');
   gpushBox();
   if (TH.unread) rpc('dg_guest_seen', { p_token: token(), p_thread: TH.id }).catch(function(){});
   if (!poll) poll = setInterval(function(){ if (!document.hidden) loadThread(TH && TH.id); }, 15000);
@@ -247,7 +258,7 @@ function pushToken(P){
 async function gpushSync(ask){
   var P = PN(); if (!P) return false;
   var perm = await P.checkPermissions();
-  if (perm.receive !== 'granted') { if (!ask) return false; perm = await P.requestPermissions(); if (perm.receive !== 'granted') { toast('휴대폰 설정에서 단골창구 알림을 허용해 주세요.'); return false; } }
+  if (perm.receive !== 'granted') { if (!ask) return false; perm = await P.requestPermissions(); if (perm.receive !== 'granted') { toast(T('휴대폰 설정에서 단골창구 알림을 허용해 주세요.', 'Please allow Dangol notifications in your phone settings.')); return false; } }
   var tk = await pushToken(P);
   var r = await rpc('dg_guest_push_set', { p_token: token(), p_push: tk, p_platform: (Capacitor.getPlatform && Capacitor.getPlatform()) || '' });
   if (r && r.ok) { store('dangol_gpush', String(Date.now())); return true; }
@@ -256,9 +267,9 @@ async function gpushSync(ask){
 async function gpushBox(){
   var bx = $('gpush'); if (!bx || !PN()) return;
   var last = Number(store('dangol_gpush') || 0);
-  if (last) { bx.innerHTML = '<p style="font-size:13px">🔔 사장님이 답장하면 알림이 와요.</p>'; if (Date.now() - last > 86400e3) gpushSync(false).catch(function(){}); return; }
-  bx.innerHTML = '<button class="btn" id="gpGo" type="button" style="background:var(--coral,#E8734A)">🔔 사장님 답장 오면 알림 받기</button>';
-  $('gpGo').onclick = async function(){ this.disabled = true; try { if (await gpushSync(true)) { toast('알림을 켰어요. 🔔'); gpushBox(); return; } } catch (e) { toast('알림을 켜지 못했어요. 잠시 뒤 다시 눌러 주세요.'); } this.disabled = false; };
+  if (last) { bx.innerHTML = '<p style="font-size:13px">🔔 ' + T('사장님이 답장하면 알림이 와요.', 'You’ll get a notification when the owner replies.') + '</p>'; if (Date.now() - last > 86400e3) gpushSync(false).catch(function(){}); return; }
+  bx.innerHTML = '<button class="btn" id="gpGo" type="button" style="background:var(--coral,#E8734A)">🔔 ' + T('사장님 답장 오면 알림 받기', 'Notify me when the owner replies') + '</button>';
+  $('gpGo').onclick = async function(){ this.disabled = true; try { if (await gpushSync(true)) { toast(T('알림을 켰어요. 🔔', 'Notifications on. 🔔')); gpushBox(); return; } } catch (e) { toast(T('알림을 켜지 못했어요. 잠시 뒤 다시 눌러 주세요.', 'Could not turn on notifications. Please try again.')); } this.disabled = false; };
 }
 /* 알림을 눌러 들어오면 그 가게 화면으로 */
 (function(){ var P = PN(); if (!P || window.__dgTap) return; window.__dgTap = true;
@@ -266,32 +277,33 @@ async function gpushBox(){
 
 async function send(){
   var b = $('body').value.trim(), nm = $('nm').value.trim(), btn = $('send');
-  if (!b) { toast('물어볼 내용을 적어 주세요.'); return; }
-  btn.disabled = true; btn.textContent = '보내는 중…';
+  if (!b) { toast(T('물어볼 내용을 적어 주세요.', 'Please write your question.')); return; }
+  btn.disabled = true; btn.textContent = T('보내는 중…', 'Sending…');
   try {
     if (nm) store('dangol_name', nm);
     var r = await rpc('dg_guest_send', { p_code: D.code, p_token: token(), p_body: b, p_name: nm || null, p_thread: TH ? TH.id : null });
     if (!r || !r.ok) throw r;
     fetch(URL0 + '/functions/v1/dangol-notify', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: KEY0, Authorization: 'Bearer ' + KEY0 },
       body: JSON.stringify({ thread: r.thread, token: token() }) }).catch(function(){});
-    $('body').value = ''; toast('보냈어요. 사장님이 답하면 이 화면에 보여요.');
+    $('body').value = ''; toast(T('보냈어요. 사장님이 답하면 이 화면에 보여요.', 'Sent! The owner’s reply will appear on this page.'));
     await loadThread(r.thread);
     $('thread').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (e) { toast(errMsg(e)); }
-  btn.disabled = false; btn.textContent = '보내기';
+  btn.disabled = false; btn.textContent = T('보내기', 'Send');
 }
 function report(){
   var reasons = ['가짜 가게 같아요', '돈 · 계좌를 먼저 요구해요', '욕설 · 불쾌한 답장', '기타'];
+  var reasonsEn = ['Looks like a fake shop', 'Asks for money or bank transfer first', 'Abusive or rude reply', 'Other'];
   var box = document.createElement('div'); box.className = 'card';
-  box.innerHTML = '<b class="h">🚩 신고하기</b><p>신고는 위브앱솔루션이 확인하고, 문제가 있으면 이 단골창구를 바로 멈춥니다. 신고한 분은 가게에 알려지지 않아요.</p>' +
-    reasons.map(function(r, i){ return '<label style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="radio" name="rr" value="' + i + '" style="width:auto"' + (i === 0 ? ' checked' : '') + '>' + r + '</label>'; }).join('') +
-    '<textarea id="rnote" maxlength="500" placeholder="자세한 내용 (선택)" style="min-height:70px"></textarea><div class="row"><button class="btn" id="rgo" type="button">신고 보내기</button><button class="btn g" id="rcx" type="button">닫기</button></div>';
+  box.innerHTML = '<b class="h">🚩 ' + T('신고하기', 'Report') + '</b><p>' + T('신고는 위브앱솔루션이 확인하고, 문제가 있으면 이 단골창구를 바로 멈춥니다. 신고한 분은 가게에 알려지지 않아요.', 'WeaveApp Solution reviews every report and suspends the shop if needed. The shop will not know who reported.') + '</p>' +
+    reasons.map(function(r, i){ return '<label style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="radio" name="rr" value="' + i + '" style="width:auto"' + (i === 0 ? ' checked' : '') + '>' + (EN ? reasonsEn[i] : r) + '</label>'; }).join('') +
+    '<textarea id="rnote" maxlength="500" placeholder="' + T('자세한 내용 (선택)', 'Details (optional)') + '" style="min-height:70px"></textarea><div class="row"><button class="btn" id="rgo" type="button">' + T('신고 보내기', 'Send report') + '</button><button class="btn g" id="rcx" type="button">' + T('닫기', 'Close') + '</button></div>';
   $('report').parentNode.replaceWith(box);
   box.querySelector('#rcx').onclick = function(){ location.reload(); };
   box.querySelector('#rgo').onclick = async function(){
     this.disabled = true;
     try { var i = Number(box.querySelector('input[name=rr]:checked').value); var r = await rpc('dg_report', { p_code: D.code, p_token: token(), p_reason: reasons[i], p_note: box.querySelector('#rnote').value.trim() || null });
-      if (!r.ok) throw r; box.innerHTML = '<b class="h">✅ 신고를 받았어요</b><p>고맙습니다. 확인한 뒤 조치하겠습니다. 급한 피해가 있으면 112에 신고하세요.</p>'; }
+      if (!r.ok) throw r; box.innerHTML = '<b class="h">✅ ' + T('신고를 받았어요', 'Report received') + '</b><p>' + T('고맙습니다. 확인한 뒤 조치하겠습니다. 급한 피해가 있으면 112에 신고하세요.', 'Thank you. We will review it. In an emergency, call 112 (police).') + '</p>'; }
     catch (e) { toast(errMsg(e)); this.disabled = false; }
   };
 }
@@ -308,10 +320,13 @@ if (Q.get('b')) {} else if (c) desk(c).catch(function(e){ A.innerHTML = '<div cl
   function paint(){ var d = dark(); b.textContent = d ? '☀️' : '🌙'; b.title = b.ariaLabel = d ? '주간 모드로' : '야간 모드로'; }
   b.onclick = function(){ var t = dark() ? 'light' : 'dark'; R.setAttribute('data-theme', t); try { localStorage.setItem('dg_theme', t); } catch (e) {} paint(); };
   paint(); var top = document.querySelector('.top');
-  if (top) { b.style.marginLeft = 'auto'; top.appendChild(b); }
+  /* 🌐 한국어 ↔ English 단추 (손님 화면) */
+  var lg = document.createElement('button'); lg.type = 'button'; lg.style.cssText = b.style.cssText + ';width:auto;padding:0 12px;font-size:13.5px;font-weight:800;margin-right:6px';
+  lg.textContent = window.__dgEN ? '한국어' : 'EN'; lg.title = lg.ariaLabel = window.__dgEN ? '한국어로 보기' : 'View in English'; lg.onclick = function(){ window.__dgLang && window.__dgLang(); };
+  if (top) { lg.style.marginLeft = 'auto'; top.appendChild(lg); top.appendChild(b); }
   else { var bar = document.createElement('div');   /* 위쪽 띠가 없는 화면: 맨 위 오른쪽에 한 줄 */
     bar.style.cssText = 'max-width:640px;margin:0 auto -6px;padding:max(10px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));display:flex;justify-content:flex-end';
-    b.style.width = b.style.height = '34px'; b.style.fontSize = '16px'; bar.appendChild(b); document.body.insertBefore(bar, document.body.firstChild); }
+    b.style.width = b.style.height = '34px'; b.style.fontSize = '16px'; lg.style.height = '34px'; bar.appendChild(lg); bar.appendChild(b); document.body.insertBefore(bar, document.body.firstChild); }
 })();
 </script>
 </body>
