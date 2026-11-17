@@ -439,13 +439,19 @@ if (Q.get('b')) {} else if (c) desk(c).catch(function(e){ A.innerHTML = '<div cl
   function paint(){ var d = dark(); b.textContent = d ? '☀️' : '🌙'; b.title = b.ariaLabel = d ? '주간 모드로' : '야간 모드로'; }
   b.onclick = function(){ var t = dark() ? 'light' : 'dark'; R.setAttribute('data-theme', t); try { localStorage.setItem('dg_theme', t); } catch (e) {} paint(); };
   paint(); var top = document.querySelector('.top');
+  /* ✕ 2026-11-17 닫기 — 한 휴대폰으로 손님 · 사장님을 오가므로, 언제든 첫 화면(사장님 / 고객님 고르기)으로 */
+  var cl = document.createElement('a'); cl.id = 'dgClose';
+  cl.textContent = window.__dgEN ? '✕ Close' : '✕ 닫기';
+  cl.style.cssText = b.style.cssText + ';width:auto;padding:0 14px;font-size:14px;font-weight:800;text-decoration:none;margin-right:auto';
+  cl.href = /(^|\.)dangol\.org$/.test(location.hostname) ? 'index.html' : 'javascript:void 0';
+  if (!/(^|\.)dangol\.org$/.test(location.hostname)) cl.onclick = function(e){ e.preventDefault(); if (history.length > 1) history.back(); else location.replace('index.html'); };
   /* 🌐 한국어 ↔ English 단추 (손님 화면) */
   var lg = document.createElement('button'); lg.type = 'button'; lg.style.cssText = b.style.cssText + ';width:auto;padding:0 12px;font-size:13.5px;font-weight:800;margin-right:6px';
   lg.textContent = window.__dgEN ? '한국어' : 'EN'; lg.title = lg.ariaLabel = window.__dgEN ? '한국어로 보기' : 'View in English'; lg.onclick = function(){ window.__dgLang && window.__dgLang(); };
   if (top) { lg.style.marginLeft = 'auto'; top.appendChild(lg); top.appendChild(b); }
-  else { var bar = document.createElement('div');   /* 위쪽 띠가 없는 화면: 맨 위 오른쪽에 한 줄 */
-    bar.style.cssText = 'max-width:640px;margin:0 auto -6px;padding:max(10px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));display:flex;justify-content:flex-end';
-    b.style.width = b.style.height = '34px'; b.style.fontSize = '16px'; lg.style.height = '34px'; bar.appendChild(lg); bar.appendChild(b); document.body.insertBefore(bar, document.body.firstChild); }
+  else { var bar = document.createElement('div');   /* 위쪽 띠가 없는 화면: 맨 위 한 줄 (왼쪽 닫기 · 오른쪽 EN · 주야간) */
+    bar.style.cssText = 'max-width:640px;margin:0 auto -6px;padding:max(10px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));display:flex;justify-content:flex-end;align-items:center;gap:0';
+    b.style.width = b.style.height = '34px'; b.style.fontSize = '16px'; lg.style.height = '34px'; cl.style.height = '34px'; bar.appendChild(cl); bar.appendChild(lg); bar.appendChild(b); document.body.insertBefore(bar, document.body.firstChild); }
 })();
 </script>
 </body>
