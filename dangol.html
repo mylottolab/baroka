@@ -50,6 +50,15 @@ summary::before{ content:'Q '; color:var(--coral); }
 .m{ border-radius:14px; padding:9px 13px; max-width:90%; font-size:15.5px; }
 .m small{ display:block; font-size:12px; color:var(--sub); font-weight:700; }
 .m.me{ align-self:flex-end; background:var(--tint); } .m.o{ align-self:flex-start; background:var(--card); border:1.5px solid var(--line); }
+/* 📸 2026-11-17 우리 가게 갤러리 (23_dangol_gallery.sql) */
+.gal{ display:grid; grid-template-columns:repeat(4, 1fr); grid-auto-rows:var(--cell, 80px); grid-auto-flow:dense; gap:4px; }
+.gal .gp{ position:relative; border-radius:10px; overflow:hidden; background:var(--line); cursor:pointer; border:none; padding:0; }
+.gal .gp img{ width:100%; height:100%; object-fit:cover; display:block; }
+.gal .s2x1{ grid-column:span 2; } .gal .s1x2{ grid-row:span 2; } .gal .s2x2{ grid-column:span 2; grid-row:span 2; }
+.gal .gp .cap{ position:absolute; left:0; right:0; bottom:0; padding:14px 7px 5px; font-size:12px; font-weight:700; color:#fff; background:linear-gradient(transparent, rgba(0,0,0,.62)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:left; }
+.gal .gp.on{ outline:3px solid var(--coral); outline-offset:-3px; }
+.gview{ position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.92); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:max(20px,env(safe-area-inset-top,0px)) 16px max(20px,env(safe-area-inset-bottom,0px)); color:#fff; text-align:center; }
+.gview img{ max-width:100%; max-height:76vh; border-radius:12px; object-fit:contain; } .gview p{ margin:0; font-size:16px; font-weight:700; } .gview small{ opacity:.7; }
 /* 📷 📞 2026-11-17 사진 · 동영상 · 통화 (실용형 · 프리미엄형) */
 .m .mm{ display:block; max-width:min(260px,70vw); max-height:320px; border-radius:10px; margin-top:4px; background:var(--line); object-fit:cover; }
 .m.call{ align-self:center; background:transparent; border:none; font-size:13.5px; color:var(--sub); font-weight:700; padding:2px 8px; }
@@ -196,7 +205,7 @@ async function desk(code){
        '<h2>' + esc(d.name) + '</h2>' + (d.intro ? '<div class="pre-wrap">' + esc(d.intro) + '</div>' + (risky(d.intro) ? '<div class="warn">' + WARN + '</div>' : '') : '') +
        ((d.hours || d.region || d.address) ? '<div class="meta">' + (d.hours ? '<span>' + T('영업시간', 'Hours') + '</span><span>' + esc(d.hours) + '</span>' : '') +
          (d.address ? '<span>' + T('주소', 'Address') + '</span><span>' + esc(d.address) + (d.address_detail ? ' ' + esc(d.address_detail) : '') + '</span>' : (d.region ? '<span>' + T('지역', 'Area') + '</span><span>' + esc(d.region) + '</span>' : '')) + '</div>' : '') +
-       (d.address ? mapRow(d) : '') + '</div>';
+       (d.address ? mapRow(d) : '') + '</div><div id="gal"></div>';
   var items = d.items || [];
   if (items.length || d.greeting) {
     h += '<div class="card"><b class="h">🙋 ' + T('자주 묻는 질문', 'FAQ (from the owner)') + '</b>' + (d.greeting ? '<p class="pre-wrap">' + esc(d.greeting) + '</p>' : '') +
@@ -226,7 +235,24 @@ async function desk(code){
   if ($('vc')) $('vc').onclick = function(){ dial(false); };
   if ($('vv')) $('vv').onclick = function(){ dial(true); };
   if ($('cpAddr')) $('cpAddr').onclick = function(){ var t = d.address + (d.address_detail ? ' ' + d.address_detail : ''); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ toast(T('주소를 복사했어요. 내비에 붙여 넣으세요.', 'Address copied. Paste it into your map app.')); }, function(){ toast(t); }); };
+  loadGal(d.code);
   await loadThread(Q.get('t'));
+}
+/* 📸 우리 가게 갤러리 — 사장님이 올린 신상 · 새 메뉴 · 가게 모습 (블록처럼 쌓아 보여 줍니다) */
+function galCell(){ var g = document.querySelector('.gal'); if (g) g.style.setProperty('--cell', Math.floor((g.clientWidth - 12) / 4) + 'px'); }
+window.addEventListener('resize', galCell);
+async function loadGal(code){
+  var box = $('gal'); if (!box) return;
+  var sh = []; try { sh = await rpc('dg_shots', { p_code: code }); } catch (e) { return; }
+  if (!sh || !sh.length) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="card"><b class="h">📸 ' + T('우리 가게 사진', 'Photos from the shop') + '</b><div class="gal">' + sh.map(function(x, i){
+    return '<button type="button" class="gp s' + esc(x.s) + '" data-i="' + i + '"><img loading="lazy" alt="' + esc(x.c || '') + '" src="' + esc(photoUrl(x.p)) + '">' + (x.c ? '<span class="cap">' + esc(x.c) + '</span>' : '') + '</button>';
+  }).join('') + '</div></div>';
+  galCell();
+  box.querySelectorAll('[data-i]').forEach(function(b){ b.onclick = function(){ var x = sh[+b.dataset.i];
+    var v = document.createElement('div'); v.className = 'gview';
+    v.innerHTML = '<img alt="" src="' + esc(photoUrl(x.p)) + '">' + (x.c ? '<p>' + esc(x.c) + '</p>' : '') + '<small>' + when(x.t) + ' · ' + T('누르면 닫혀요', 'Tap to close') + '</small>';
+    v.onclick = function(){ v.remove(); }; document.body.appendChild(v); }; });
 }
 function grams(t){ var o = {}; String(t || '').toLowerCase().replace(/[^0-9a-z가-힣]+/g, ' ').split(' ').forEach(function(w){ if (w.length === 1) o[w] = 1; for (var i = 0; i < w.length - 1; i++) o[w.substr(i, 2)] = 1; }); return o; }
 var STOP = ['어떻','떻게','하나','나요','해요','하는','어요','세요','니다','궁금','있나','는데','되나','있어','알려','주세','문의'], ONE = '가이은는을를에도좀요곳뭐왜것거';
