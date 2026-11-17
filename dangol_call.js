@@ -159,9 +159,18 @@
       : o.t('통화를 시작하지 못했어요. 다시 해 주세요.', 'Could not start the call. Please try again.');
   }
 
+  /* 🔴 2026-11-17 아이폰 단골창구 앱 1.0 은 마이크 권한 문구가 없어, 마이크를 켜는 순간 앱이 꺼집니다(애플 규칙).
+     1.1 부터는 앱이 canCall 을 알려 줍니다. 그 전 앱에서는 통화를 시작하지 않고 안내만 합니다. */
+  function oldIOSApp(){
+    try { return !!(window.AliasNative && AliasNative.appKind && AliasNative.appKind() === 'dangol' && AliasNative.isIOS && AliasNative.isIOS() && !AliasNative.canCall); } catch (e) { return false; }
+  }
+  function blockedMsg(o){ return o.t('통화는 단골창구 앱을 최신으로 업데이트한 뒤 쓸 수 있어요. 지금은 사파리에서 dangol.org 로 열면 바로 통화할 수 있어요.',
+                                     'Please update the Dangol app to make calls, or open dangol.org in Safari.'); }
+
   /* ── 손님: 걸기 ────────────────────────────────────── */
   async function guest(o){
     o.t = o.t || function(k){ return k; };
+    if (oldIOSApp()) { o.toast(blockedMsg(o)); return; }
     if (!navigator.mediaDevices || !window.RTCPeerConnection) { o.toast(o.t('이 브라우저에서는 통화가 안 돼요. 크롬 · 사파리 최신 버전에서 열어 주세요.', 'Calls are not supported in this browser. Please use the latest Chrome or Safari.')); return; }
     o.view = ui({ video: o.video, who: o.who, t: o.t, icon: o.video ? '🎥' : '📞' });
     o.view.state(o.t('마이크를 준비하는 중…', 'Getting your microphone ready…'));
@@ -216,6 +225,7 @@
   /* ── 사장님: 울림 → 받기 ───────────────────────────── */
   function owner(o){
     o.t = o.t || function(k){ return k; };
+    if (oldIOSApp()) { o.toast('손님 전화가 왔어요. 지금 앱에서는 받을 수 없어요 — 단골창구 앱을 최신으로 업데이트하거나 사파리에서 dangol.org 로 받아 주세요.'); return null; }
     o.view = ui({ video: o.video, who: o.who, t: o.t, icon: o.video ? '🎥' : '📞' });
     o.view.state(o.video ? '영상 통화가 왔어요' : '전화가 왔어요');
     var E = Engine(o), readyIv = null, answered = null;
@@ -259,5 +269,5 @@
     return E;
   }
 
-  window.DGCall = { guest: guest, owner: owner };
+  window.DGCall = { guest: guest, owner: owner, oldIOSApp: oldIOSApp };
 })();

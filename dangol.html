@@ -208,7 +208,7 @@ async function desk(code){
       '<textarea id="body" maxlength="1000" placeholder="' + T('예) 오늘 저녁 6시에 4명 자리 있을까요?', 'e.g. Do you have a table for 4 at 6 pm today?') + '" aria-label="' + T('물어볼 내용', 'Your question') + '"></textarea>' +
       '<button class="btn c" id="send" type="button">' + T('보내기', 'Send') + '</button>' +
       (d.media ? '<div class="tools"><button class="btn g" id="pick" type="button">📷 ' + T('사진 · 동영상 보내기', 'Send photo / video') + '</button></div>' +
-        '<input type="file" id="file" accept="image/*,video/*" hidden><p style="font-size:13px;margin:0">' + T('부품 · 상품 사진을 찍어 보내면 사장님이 바로 알아봐요. 동영상은 30초까지.', 'Send a photo of the item you need. Videos up to 30 seconds.') + '</p>' : '') +
+        '<input type="file" id="file" accept="' + (window.DGCall && DGCall.oldIOSApp() ? 'image/*' : 'image/*,video/*') + '" hidden><p style="font-size:13px;margin:0">' + T('부품 · 상품 사진을 찍어 보내면 사장님이 바로 알아봐요. 동영상은 30초까지.', 'Send a photo of the item you need. Videos up to 30 seconds.') + '</p>' : '') +
       '</div>' +
       (d.call || d.vcall ? '<div class="card"><b class="h">📞 ' + T('사장님과 바로 통화', 'Call the owner') + '</b><p>' + T('전화번호 없이 인터넷으로 통화해요. 서로 번호가 보이지 않아요.', 'Talk over the internet — no phone numbers are shared.') + '</p>' +
         '<div class="callbar">' + (d.call ? '<button class="btn" id="vc" type="button">📞 ' + T('음성 통화', 'Voice call') + '</button>' : '') +
