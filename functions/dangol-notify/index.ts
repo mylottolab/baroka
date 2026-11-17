@@ -147,6 +147,35 @@ Deno.serve(async (req) => {
       }
       return json({ ok: true, sent: sent0 });
     }
+    /* 📞 2026-11-17 — 손님이 통화를 걸었음 → 사장님 휴대폰을 울립니다 (실용형 · 프리미엄형, 22_dangol_plans.sql)
+       부르는 곳: dangol.html · body { call: <통화 번호>, token: <손님 열쇠> } — 한 통에 한 번만(dg_notify_call_targets) */
+    if (body.call) {
+      const cid = String(body.call || ''), ctk = String(body.token || '');
+      if (!/^[0-9a-f-]{36}$/i.test(cid) || ctk.length < 24 || ctk.length > 100) return json({ error: 'bad_request' }, 400);
+      const admin = createClient(SUPABASE_URL, SERVICE);
+      const tg = await admin.rpc('dg_notify_call_targets', { p_call: cid, p_token: ctk });
+      if (tg.error) { console.error('[dangol] 🔴 call targets', JSON.stringify(tg.error)); return json({ error: 'targets' }, 500); }
+      const cs = (tg.data || []).filter((r: any) => r.push_token);
+      if (!cs.length) return json({ ok: true, sent: 0 });
+      const rawc = Deno.env.get('FCM_SERVICE_ACCOUNT') || Deno.env.get('FIREBASE_SERVICE_ACCOUNT');
+      if (!rawc) throw new Error('FCM_SERVICE_ACCOUNT 가 없습니다');
+      const sac = JSON.parse(rawc);
+      const atc = await getGoogleToken(sac);
+      let sentc = 0;
+      for (const r of cs) {
+        const title = (r.video ? '🎥 ' : '📞 ') + r.desk_name + ' — ' + (r.guest || '손님') + '님 ' + (r.video ? '영상 통화' : '전화');
+        const text = '지금 눌러서 받으세요 (45초 동안 울려요)';
+        const o = await sendOne(sac.project_id, atc, r.push_token, {
+          notification: { title, body: text },
+          data: { kind: 'dangol_call', call: cid, thread: String(r.thread), url: 'dangol_owner.html?t=' + r.thread + '&call=' + cid, title, body: text },
+          android: { priority: 'HIGH', ttl: '45s', notification: { channel_id: 'aliascall_urgent', sound: 'default', tag: 'dangol-c-' + cid } },
+          apns: { headers: { 'apns-priority': '10', 'apns-push-type': 'alert', 'apns-expiration': String(Math.floor(Date.now() / 1000) + 45) },
+                  payload: { aps: { sound: 'default', 'interruption-level': 'time-sensitive', 'thread-id': 'dangol-call' } } },
+        });
+        if (o.ok) sentc++;
+      }
+      return json({ ok: true, sent: sentc });
+    }
     const thread = String(body.thread || ''), token = String(body.token || '');
     if (!/^[0-9a-f-]{36}$/i.test(thread) || token.length < 24 || token.length > 100) return json({ error: 'bad_request' }, 400);
     const admin = createClient(SUPABASE_URL, SERVICE);

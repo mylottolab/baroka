@@ -41,7 +41,7 @@ const PAYPAL_CLIENT_SECRET = Deno.env.get('PAYPAL_CLIENT_SECRET') || '';
 const PAYPAL_API = (Deno.env.get('PAYPAL_MODE') || 'sandbox') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
 
 type Sku = { kind: 'emergency' | 'line' | 'pro' | 'listing' | 'usage' | 'number' | 'baroka' | 'dangol' | 'dantok'; baroka?: 'reg' | 'change' | 'g20' | 'g60'; months: number; nominal: number; price: number; tier?: string;
-             persons?: 2 | 4; capGb?: number; ocrPro?: boolean };
+             persons?: 2 | 4; capGb?: number; ocrPro?: boolean; dgPlan?: 'basic' | 'plus' | 'premium' };
 
 /* 🔴 화면 · Play Console 과 **같아야** 합니다. 지운 번호는 다시 못 씁니다. */
 const SKUS: Record<string, Sku> = {
@@ -91,6 +91,10 @@ const SKUS: Record<string, Sku> = {
   /* 🔴 2026-11-03 — 바로카 차 갤러리 액자(기한 없음) */
   garim_dangol_1y: { kind: 'dangol', months: 12, nominal: 12, price: 9900 },   // 🏪 2026-11-15 단골창구 개설료 1년
   dangol_1y:       { kind: 'dangol', months: 12, nominal: 12, price: 9900 },   // 🏪 단골창구 사이트 dangol.org
+  garim_dangol_plus_1y:    { kind: 'dangol', months: 12, nominal: 12, price: 19800, dgPlan: 'plus' },      // 🏪 2026-11-17 실용형
+  garim_dangol_premium_1y: { kind: 'dangol', months: 12, nominal: 12, price: 33000, dgPlan: 'premium' },   // 🏪 2026-11-17 프리미엄형
+  dangol_plus_1y:          { kind: 'dangol', months: 12, nominal: 12, price: 19800, dgPlan: 'plus' },
+  dangol_premium_1y:       { kind: 'dangol', months: 12, nominal: 12, price: 33000, dgPlan: 'premium' },
   /* 💬 2026-11-17 단톡방 dantok.kr */
   dantok_room_1y:  { kind: 'dantok', months: 12, nominal: 12, price: 9900 },
   dantok_room_10g: { kind: 'dantok', months: 12, nominal: 12, price: 7900 },
@@ -267,7 +271,7 @@ const NAME: Record<string, string> = {
   ac_pro_business_1m: '프로 비즈니스 1개월', ac_pro_business_6m: '프로 비즈니스 6개월', ac_pro_business_12m: '프로 비즈니스 12개월',
   ac_pro_enterprise_1m: '프로 엔터프라이즈 1개월', ac_pro_enterprise_6m: '프로 엔터프라이즈 6개월', ac_pro_enterprise_12m: '프로 엔터프라이즈 12개월',
   ac_listing_1m: '공개 업체 목록 게재 1개월', ac_listing_6m: '공개 업체 목록 게재 6개월', ac_listing_12m: '공개 업체 목록 게재 12개월',
-  ac_usage_1gb_3m: '추가 사용량 1GB', garim_dangol_1y: '단골창구 개설료 1년', dangol_1y: '단골창구 개설료 1년',
+  ac_usage_1gb_3m: '추가 사용량 1GB', garim_dangol_1y: '단골창구 개설료 1년', dangol_1y: '단골창구 개설료 1년', garim_dangol_plus_1y: '단골창구 실용형 1년', garim_dangol_premium_1y: '단골창구 프리미엄형 1년', dangol_plus_1y: '단골창구 실용형 1년', dangol_premium_1y: '단골창구 프리미엄형 1년',
   dantok_room_1y: '단톡방 이용 1년', dantok_room_10g: '단톡방 저장 10GB 1년', dantok_gal_5g: '단톡방 갤러리 5GB 1년', dantok_gal_15g: '단톡방 갤러리 15GB 1년',
   ac_num_4_basic: '회선번호 4자리', ac_num_4_good: '좋은 회선번호 4자리', ac_num_5_basic: '회선번호 5자리', ac_num_5_good: '좋은 회선번호 5자리',
   ac_num_6_basic: '회선번호 6자리', ac_num_6_good: '좋은 회선번호 6자리', ac_num_7_basic: '회선번호 7자리', ac_num_7_good: '좋은 회선번호 7자리',
@@ -373,10 +377,10 @@ async function fulfill(pay: any) {
   }
   /* 🏪 2026-11-15 — 단골창구 개설료: 고른 단골창구에 기간만 넣고 끝 */
   if (sku.kind === 'dangol') {
-    const { data: g, error: ge } = await supabase.rpc('dg_grant_paid', { p_user: userId, p_desk: String(o.usageTargetId || ''), p_months: sku.months, p_payment: pay.id, p_source: pay.method });
+    const { data: g, error: ge } = await supabase.rpc('dg_grant_plan', { p_user: userId, p_desk: String(o.usageTargetId || ''), p_months: sku.months, p_payment: pay.id, p_source: pay.method, p_plan: sku.dgPlan || 'basic' });
     if (ge || !g || !g.ok) throw new Error('단골창구 기간을 넣지 못했습니다(' + (ge?.message || g?.error) + '). 고객센터에서 도와드립니다.');
     await supabase.from('payments').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', pay.id);
-    return { ok: true, kind: 'dangol', months: sku.months, until: g.until };
+    return { ok: true, kind: 'dangol', months: sku.months, until: g.until, plan: g.plan, bonusDays: g.bonus_days };
   }
   let hotline: any = null, extended = false, sub: any = null;
   if (sku.kind === 'line') {

@@ -78,7 +78,7 @@ const APPLE_METHOD = 'app_store';
    🔴 2026-09-28 — hotlines.duration_months 에는 DB 가 정한 숫자만 들어갑니다
      (hotlines_duration_months_check). 4 · 7 · 13 을 넣었다가 회선이 안 만들어졌습니다. */
 type Sku = { kind: 'emergency' | 'line' | 'pro' | 'listing' | 'usage' | 'number' | 'baroka' | 'dangol' | 'dantok'; baroka?: 'reg' | 'change' | 'g20' | 'g60'; months: number; nominal: number; price: number; tier?: string;
-             persons?: 2 | 4; capGb?: number; ocrPro?: boolean };
+             persons?: 2 | 4; capGb?: number; ocrPro?: boolean; dgPlan?: 'basic' | 'plus' | 'premium' };
 
 /* 🔴 화면 · Play Console 과 **같아야** 합니다. 지운 번호는 다시 못 씁니다. */
 const SKUS: Record<string, Sku> = {
@@ -128,6 +128,11 @@ const SKUS: Record<string, Sku> = {
   /* 🏪 2026-11-15 단골창구 개설료 1년 (애플은 garim_dangol_1y_nr — 앱이 _nr 를 떼고 보냅니다) */
   garim_dangol_1y: { kind: 'dangol', months: 12, nominal: 12, price: 9900 },
   dangol_1y:       { kind: 'dangol', months: 12, nominal: 12, price: 9900 },   // 단골창구 앱(com.weaveapp.dangol) · 애플 dangol_1y_nr
+  /* 🏪 2026-11-17 단골창구 요금제 — 실용형(사진 · 동영상 · 음성 통화) · 프리미엄형(+영상 통화). 올리면 남은 기간 값을 날짜로 바꿔 더함(dg_grant_plan) */
+  garim_dangol_plus_1y:    { kind: 'dangol', months: 12, nominal: 12, price: 19800, dgPlan: 'plus' },
+  garim_dangol_premium_1y: { kind: 'dangol', months: 12, nominal: 12, price: 33000, dgPlan: 'premium' },
+  dangol_plus_1y:          { kind: 'dangol', months: 12, nominal: 12, price: 19800, dgPlan: 'plus' },      // 애플 dangol_plus_1y_nr
+  dangol_premium_1y:       { kind: 'dangol', months: 12, nominal: 12, price: 33000, dgPlan: 'premium' },   // 애플 dangol_premium_1y_nr
   /* 💬 2026-11-17 단톡방 앱(com.weaveapp.dantok) — 애플은 끝에 _nr. 넣는 일은 dt_grant_paid 가 합니다(usageTargetId = 방 번호) */
   dantok_room_1y:  { kind: 'dantok', months: 12, nominal: 12, price: 9900 },
   dantok_room_10g: { kind: 'dantok', months: 12, nominal: 12, price: 7900 },
@@ -513,7 +518,7 @@ Deno.serve(async (req) => {
        내 단골창구가 아니거나 닫았으면 acknowledge 하지 않습니다 → 구글 자동 환불(애플은 고객센터). */
     if (sku.kind === 'dangol') {
       const { data: g, error: ge } = usageKind === 'dangol' && usageTargetId
-        ? await supabase.rpc('dg_grant_paid', { p_user: userId, p_desk: String(usageTargetId), p_months: sku.months, p_payment: pay.id, p_source: apple ? 'apple' : 'google' })
+        ? await supabase.rpc('dg_grant_plan', { p_user: userId, p_desk: String(usageTargetId), p_months: sku.months, p_payment: pay.id, p_source: apple ? 'apple' : 'google', p_plan: sku.dgPlan || 'basic' })
         : { data: null, error: { message: 'no_desk' } };
       if (ge || !g || !g.ok) {
         console.error('[ac-google-verify] 🔴 단골창구 기간을 넣지 못했습니다:', ge?.message || g?.error);
@@ -529,7 +534,7 @@ Deno.serve(async (req) => {
         if (!ack.ok) console.error('[ac-google-verify] 🔴 acknowledge 실패(단골창구):', (await ack.text()).slice(0, 300));
       }
       console.log('[ac-google-verify] ✓ 단골창구', productId, userId);
-      return reply({ ok: true, kind: 'dangol', months: sku.months, until: g.until });
+      return reply({ ok: true, kind: 'dangol', months: sku.months, until: g.until, plan: g.plan, bonusDays: g.bonus_days });
     }
 
     /* 💬 2026-11-17 — 단톡방: 방 연장 · 방 저장권 · 내 갤러리. 못 넣으면 acknowledge 안 함 → 구글 자동 환불 */
