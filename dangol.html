@@ -15,6 +15,7 @@
 (function(){ var b = new URLSearchParams(location.search).get('b'); if (b) location.replace('https://aliascall.com/aliascall_business.html?b=' + encodeURIComponent(b)); })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="dangol_call.js"></script>
 <style>
 :root{ --bg:#F2F5F4; --card:#fff; --ink:#12302E; --sub:#4E6462; --line:#DCE3DE; --teal:#123F3D; --teal2:#1F6F6B; --coral:#E8734A; --tint:#E4EFEE; --warn:#8A4B00; --warnbg:#FFF2D9; --red:#B4232A; }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#111816; --card:#1A2422; --ink:#E6EEEC; --sub:#9DB0AD; --line:#2C3A37; --tint:#1E3532; --warn:#F2C46B; --warnbg:#3A2E14; --red:#FF8A8A; color-scheme:dark; } }
@@ -49,6 +50,11 @@ summary::before{ content:'Q '; color:var(--coral); }
 .m{ border-radius:14px; padding:9px 13px; max-width:90%; font-size:15.5px; }
 .m small{ display:block; font-size:12px; color:var(--sub); font-weight:700; }
 .m.me{ align-self:flex-end; background:var(--tint); } .m.o{ align-self:flex-start; background:var(--card); border:1.5px solid var(--line); }
+/* 📷 📞 2026-11-17 사진 · 동영상 · 통화 (실용형 · 프리미엄형) */
+.m .mm{ display:block; max-width:min(260px,70vw); max-height:320px; border-radius:10px; margin-top:4px; background:var(--line); object-fit:cover; }
+.m.call{ align-self:center; background:transparent; border:none; font-size:13.5px; color:var(--sub); font-weight:700; padding:2px 8px; }
+.tools{ display:flex; gap:6px; flex-wrap:wrap; } .tools .btn{ flex:1; min-width:0; padding:11px 6px; font-size:14.5px; }
+.callbar{ display:flex; gap:8px; } .callbar .btn{ flex:1; min-width:0; }
 .li{ display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line); text-decoration:none; color:var(--ink); font-weight:800; }
 .li:first-child{ border-top:none; } .li span{ flex:1; min-width:0; } .li i{ font-style:normal; color:var(--sub); font-weight:700; font-size:14px; }
 .dot{ background:var(--red); color:#fff; border-radius:20px; font-size:12px; padding:0 7px; margin-left:4px; }
@@ -200,7 +206,14 @@ async function desk(code){
     '<div class="card" id="askCard"><b class="h">💬 ' + T('사장님께 묻기', 'Ask the owner') + '</b><p>' + T('전화번호는 필요 없어요. 사장님이 답하면 이 화면과 「단골창구 입구 → 내가 물어본 가게」에서 보입니다.', 'No phone number needed. The owner’s reply will appear on this page and in “Shops I asked” on the Dangol home.') + '</p>' +
       '<input id="nm" maxlength="20" placeholder="' + T('부를 이름 (선택 · 예: 3번 테이블, 김OO)', 'Your name (optional, e.g. Table 3, Emma)') + '" aria-label="' + T('부를 이름', 'Your name') + '">' +
       '<textarea id="body" maxlength="1000" placeholder="' + T('예) 오늘 저녁 6시에 4명 자리 있을까요?', 'e.g. Do you have a table for 4 at 6 pm today?') + '" aria-label="' + T('물어볼 내용', 'Your question') + '"></textarea>' +
-      '<button class="btn c" id="send" type="button">' + T('보내기', 'Send') + '</button></div>' +
+      '<button class="btn c" id="send" type="button">' + T('보내기', 'Send') + '</button>' +
+      (d.media ? '<div class="tools"><button class="btn g" id="pick" type="button">📷 ' + T('사진 · 동영상 보내기', 'Send photo / video') + '</button></div>' +
+        '<input type="file" id="file" accept="image/*,video/*" hidden><p style="font-size:13px;margin:0">' + T('부품 · 상품 사진을 찍어 보내면 사장님이 바로 알아봐요. 동영상은 30초까지.', 'Send a photo of the item you need. Videos up to 30 seconds.') + '</p>' : '') +
+      '</div>' +
+      (d.call || d.vcall ? '<div class="card"><b class="h">📞 ' + T('사장님과 바로 통화', 'Call the owner') + '</b><p>' + T('전화번호 없이 인터넷으로 통화해요. 서로 번호가 보이지 않아요.', 'Talk over the internet — no phone numbers are shared.') + '</p>' +
+        '<div class="callbar">' + (d.call ? '<button class="btn" id="vc" type="button">📞 ' + T('음성 통화', 'Voice call') + '</button>' : '') +
+        (d.vcall ? '<button class="btn c" id="vv" type="button">🎥 ' + T('영상 통화', 'Video call') + '</button>' : '') + '</div></div>'
+       : (d.plan && d.plan !== 'basic' && (d.away || !d.call_on) ? '<div class="card aw"><p>📞 ' + T('지금은 사장님이 통화를 받지 않아요. 글로 남겨 주세요.', 'The owner is not taking calls now. Please leave a message.') + '</p></div>' : '')) +
     '<div style="text-align:center"><button class="link" id="report" type="button">🚩 ' + T('이 가게 신고하기', 'Report this shop') + '</button></div>' +
     '<p class="foot"><a href="dangol.html" style="color:inherit">' + T('단골창구 입구', 'Dangol home') + '</a> · ' + T(DGHOST ? '단골창구 · dangol.org' : '단골창구 by 가림콜', 'Dangol · dangol.org') + '</p>';
   A.innerHTML = h;
@@ -209,6 +222,9 @@ async function desk(code){
   try { $('nm').value = store('dangol_name') || ''; } catch (e) {}
   $('send').onclick = send;
   $('report').onclick = report;
+  if ($('pick')) { $('pick').onclick = function(){ $('file').click(); }; $('file').onchange = function(){ var f = this.files && this.files[0]; this.value = ''; if (f) sendMedia(f); }; }
+  if ($('vc')) $('vc').onclick = function(){ dial(false); };
+  if ($('vv')) $('vv').onclick = function(){ dial(true); };
   if ($('cpAddr')) $('cpAddr').onclick = function(){ var t = d.address + (d.address_detail ? ' ' + d.address_detail : ''); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ toast(T('주소를 복사했어요. 내비에 붙여 넣으세요.', 'Address copied. Paste it into your map app.')); }, function(){ toast(t); }); };
   await loadThread(Q.get('t'));
 }
@@ -233,12 +249,18 @@ async function loadThread(prefer){
   TH = ts.filter(function(t){ return t.id === prefer; })[0] || ts.filter(function(t){ return t.status !== 'closed'; })[0] || null;
   var box = $('thread');
   if (!TH) { box.innerHTML = ''; return; }
+  var sig = TH.id + ':' + TH.msgs.length + ':' + TH.status + ':' + EN;   /* 같으면 다시 그리지 않음(보던 동영상이 끊기지 않게) */
+  if (box.dataset.sig === sig) { if (TH.unread) rpc('dg_guest_seen', { p_token: token(), p_thread: TH.id }).catch(function(){}); return; }
+  box.dataset.sig = sig;
   box.innerHTML = '<div class="card"><b class="h">📮 ' + T('사장님과 나눈 이야기', 'Your conversation with the owner') + '</b><div class="msgs">' + TH.msgs.map(function(m){
-    return '<div class="m ' + (m.o ? 'o' : 'me') + '"><small>' + (m.o ? '🧑‍🍳 ' + T('사장님', 'Owner') : T('나', 'Me')) + ' · ' + when(m.t) + '</small><div class="pre-wrap">' + esc(m.b) + '</div>' +
-      (m.o && risky(m.b) ? '<div class="warn" style="margin-top:6px">' + WARN + '</div>' : '') + '</div>';
+    if (m.k === 'call') return '<div class="m call">' + esc(callText(m)) + ' · ' + when(m.t) + '</div>';
+    return '<div class="m ' + (m.o ? 'o' : 'me') + '"><small>' + (m.o ? '🧑‍🍳 ' + T('사장님', 'Owner') : T('나', 'Me')) + ' · ' + when(m.t) + '</small>' +
+      (m.u ? mediaTag(m) : '<div class="pre-wrap">' + esc(m.b) + '</div>') +
+      (m.o && !m.u && risky(m.b) ? '<div class="warn" style="margin-top:6px">' + WARN + '</div>' : '') + '</div>';
   }).join('') + '</div>' + (TH.status === 'open' ? '<p>' + T('사장님이 확인하면 여기에 답이 보여요.', 'The owner’s reply will appear here.') + '</p>' : '') + '<div id="gpush"></div></div>';
   $('askCard').querySelector('b').textContent = '💬 ' + T('이어서 묻기', 'Ask more');
   gpushBox();
+  fillMedia(box, TH.id);
   if (TH.unread) rpc('dg_guest_seen', { p_token: token(), p_thread: TH.id }).catch(function(){});
   if (!poll) poll = setInterval(function(){ if (!document.hidden) loadThread(TH && TH.id); }, 15000);
 }
@@ -274,6 +296,77 @@ async function gpushBox(){
 /* 알림을 눌러 들어오면 그 가게 화면으로 */
 (function(){ var P = PN(); if (!P || window.__dgTap) return; window.__dgTap = true;
   P.addListener('pushNotificationActionPerformed', function(a){ var d = (a && a.notification && a.notification.data) || {}; if (d.url) location.href = d.url; }); })();
+
+/* ── 📷 사진 · 동영상 (실용형 · 프리미엄형) ── 보관함은 비공개라 dangol-media 함수가 1시간짜리 주소를 줍니다 */
+var MURL = {};
+function mediaTag(m){
+  return m.k === 'video' ? '<video class="mm" data-p="' + esc(m.u) + '" controls playsinline preload="metadata"></video>'
+                         : '<a data-a="' + esc(m.u) + '" target="_blank" rel="noopener"><img class="mm" data-p="' + esc(m.u) + '" alt="' + T('사진', 'Photo') + '"></a>';
+}
+function callText(m){
+  var b = String(m.b || '');
+  if (!EN) return b;
+  var v = /영상/.test(b) ? 'Video call' : 'Voice call', mm = b.match(/(\d+)분 (\d+)초/);
+  return '📞 ' + v + (mm ? ' ' + mm[1] + 'm ' + mm[2] + 's' : /부재중/.test(b) ? ' — missed' : /어려워요/.test(b) ? ' — owner unavailable' : '');
+}
+async function mediaFn(body){
+  var r = await fetch(URL0 + '/functions/v1/dangol-media', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: KEY0, Authorization: 'Bearer ' + KEY0 }, body: JSON.stringify(body) });
+  return r.json().catch(function(){ return {}; });
+}
+async function fillMedia(box, thread){
+  var els = box.querySelectorAll('[data-p]'); if (!els.length) return;
+  var need = Array.prototype.some.call(els, function(e){ return !MURL[e.dataset.p] || MURL[e.dataset.p].at < Date.now() - 50 * 60e3; });
+  if (need) { try { var r = await mediaFn({ act: 'view', thread: thread, token: token() }); if (r && r.urls) Object.keys(r.urls).forEach(function(k){ MURL[k] = { u: r.urls[k], at: Date.now() }; }); } catch (e) {} }
+  els.forEach(function(e){ var x = MURL[e.dataset.p]; if (x && e.getAttribute('src') !== x.u) e.src = x.u; });
+  box.querySelectorAll('[data-a]').forEach(function(a){ var x = MURL[a.dataset.a]; if (x) a.href = x.u; });
+}
+function shrink(f){   // 사진은 긴 쪽 1600px · JPEG 로 줄여서 보냅니다
+  return new Promise(function(res, rej){
+    var img = new Image(), u = URL.createObjectURL(f);
+    img.onload = function(){ var k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(u); c.toBlob(function(b){ b ? res(b) : rej(new Error('photo')); }, 'image/jpeg', 0.85); };
+    img.onerror = function(){ URL.revokeObjectURL(u); rej(new Error('photo')); };
+    img.src = u;
+  });
+}
+function vidSecs(f){
+  return new Promise(function(res){ var v = document.createElement('video'), u = URL.createObjectURL(f); v.preload = 'metadata';
+    v.onloadedmetadata = function(){ URL.revokeObjectURL(u); res(v.duration || 0); }; v.onerror = function(){ URL.revokeObjectURL(u); res(0); }; v.src = u; });
+}
+async function sendMedia(f){
+  var vid = /^video\//.test(f.type), btn = $('pick'), secs = null, blob = f, ext = 'jpg';
+  try {
+    if (vid) {
+      secs = await vidSecs(f);
+      if (secs > 31) return toast(T('동영상은 30초까지 보낼 수 있어요.', 'Videos can be up to 30 seconds.'));
+      if (f.size > 30 * 1024 * 1024) return toast(T('동영상이 너무 커요(30MB까지). 화질을 낮춰 다시 찍어 주세요.', 'The video is too large (max 30 MB).'));
+      ext = /quicktime/.test(f.type) ? 'mov' : /webm/.test(f.type) ? 'webm' : 'mp4';
+    } else { blob = await shrink(f); }
+    btn.disabled = true; btn.textContent = T('보내는 중…', 'Sending…');
+    var nm = $('nm').value.trim(); if (nm) store('dangol_name', nm);
+    var t = await mediaFn({ act: 'up', kind: vid ? 'video' : 'photo', ext: ext, code: D.code, token: token(), thread: TH ? TH.id : null });
+    if (!t || !t.ok) throw { error: t && t.error };
+    var up = await sb.storage.from('dangol_chat').uploadToSignedUrl(t.path, t.token, blob, { contentType: vid ? (f.type || 'video/mp4') : 'image/jpeg' });
+    if (up.error) throw up.error;
+    var r = await rpc('dg_guest_media', { p_code: D.code, p_token: token(), p_path: t.path, p_secs: secs ? Math.round(secs) : null, p_name: nm || null, p_thread: TH ? TH.id : null });
+    if (!r || !r.ok) throw r;
+    fetch(URL0 + '/functions/v1/dangol-notify', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: KEY0, Authorization: 'Bearer ' + KEY0 },
+      body: JSON.stringify({ thread: r.thread, token: token() }) }).catch(function(){});
+    toast(T('보냈어요.', 'Sent!'));
+    await loadThread(r.thread);
+  } catch (e) {
+    var c = e && e.error;
+    toast(c === 'plan' ? T('이 가게는 지금 사진을 받지 않아요.', 'This shop is not accepting photos now.') : c === 'too_many' ? T('잠시 뒤에 다시 보내 주세요.', 'Please try again in a moment.') : T('보내지 못했어요. 다시 해 주세요.', 'Could not send. Please try again.'));
+  } finally { if (btn) { btn.disabled = false; btn.textContent = '📷 ' + T('사진 · 동영상 보내기', 'Send photo / video'); } }
+}
+/* ── 📞 번호 없는 통화 (dangol_call.js) ── */
+function dial(video){
+  if (!window.DGCall) return toast(T('통화 준비가 아직 안 됐어요. 새로 고친 뒤 다시 눌러 주세요.', 'Please reload the page and try again.'));
+  var nm = $('nm').value.trim(); if (nm) store('dangol_name', nm);
+  DGCall.guest({ sb: sb, url: URL0, key: KEY0, rpc: rpc, toast: toast, t: T, code: D.code, token: token(), video: video, name: nm || null,
+    thread: TH ? TH.id : null, who: D.name, maxMin: 30, onThread: function(){}, onEnd: function(){ setTimeout(function(){ loadThread(TH && TH.id); }, 1200); } });
+}
 
 async function send(){
   var b = $('body').value.trim(), nm = $('nm').value.trim(), btn = $('send');
