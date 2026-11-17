@@ -177,6 +177,7 @@
       o.toast(c === 'line_busy' ? o.t('사장님이 다른 손님과 통화 중이에요. 잠시 뒤 다시 걸어 주세요.', 'The owner is on another call. Please try again shortly.')
             : c === 'away' ? o.t('지금은 영업시간이 아니라 통화가 어려워요. 글로 남겨 주세요.', 'The shop is closed now. Please leave a message.')
             : c === 'call_off' ? o.t('지금은 사장님이 통화를 받지 않아요. 글로 남겨 주세요.', 'The owner is not taking calls now. Please leave a message.')
+            : c === 'quota' ? o.t('이번 달 통화 시간을 다 써서 지금은 통화가 어려워요. 글로 남겨 주세요.', 'Calls are not available right now. Please leave a message.')
             : c === 'too_many' ? o.t('잠시 뒤에 다시 걸어 주세요.', 'Please try again in a little while.')
             : o.t('통화를 걸지 못했어요. 글로 남겨 주세요.', 'Could not place the call. Please leave a message.'));
       return;

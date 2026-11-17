@@ -6,7 +6,14 @@
 --   중간에 올리기: 결제는 늘 새 상품 1년치. 남은 기간의 값(옛 가격 기준)을 새 가격으로 바꿔 날짜로 더해 줍니다.
 --     예) 기본형 120일 남음 → 실용형: 9,900 × 120/365 ÷ 19,800 × 365 = 60일 → 365 + 60일
 --   낮은 상품을 샀는데 높은 상품이 아직 남아 있으면: 산 값을 높은 상품 날짜로 바꿔 더합니다(요금제는 그대로).
+--   한 달 기본 사용량 (2026-11-17 확정)
+--              음성 통화   영상 통화   사진·동영상 보관
+--     실용형     월 600분      –           3GB
+--     프리미엄형 월 600분    월 100분       6GB
+--   모자라면 추가 구입: 음성 +300분 3,300원 · 영상 +100분 3,300원(그달 말까지) · 보관 +1GB 1,100원(요금제 기간 동안)
+--   한도에 닿으면 손님 화면에서 그 통화 단추만 숨김(글 · 사진 문의는 그대로). 통화 도중에는 끊지 않음.
 --   상품: 단골창구 앱 dangol_1y · dangol_plus_1y · dangol_premium_1y (애플은 끝에 _nr)
+--         추가 구입 dangol_voice_300 · dangol_video_100 · dangol_store_1g (가림콜 앱은 앞에 garim_)
 --         가림콜 앱  garim_dangol_1y · garim_dangol_plus_1y · garim_dangol_premium_1y
 --   에일리어스콜(가림) 프로젝트 SQL 편집기에서 한 번 실행하세요. 14_dangol_notice_auto.sql 다음.
 -- ═══════════════════════════════════════════════════════════════════════
@@ -64,6 +71,33 @@ values ('dangol_chat', 'dangol_chat', false, 31457280, array['image/jpeg', 'imag
 on conflict (id) do update set public = false, file_size_limit = 31457280,
   allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm'];
 
+-- 이번 달 통화 사용량 · 추가 구입분 (달은 한국 시간 기준 'YYYY-MM')
+create table if not exists public.dg_usage (
+  desk_id     uuid not null references public.dg_desks(id) on delete cascade,
+  ym          text not null,
+  voice_secs  int not null default 0,
+  video_secs  int not null default 0,
+  voice_extra int not null default 0,   -- 분
+  video_extra int not null default 0,   -- 분
+  primary key (desk_id, ym)
+);
+alter table public.dg_usage enable row level security;
+revoke all on public.dg_usage from anon, authenticated;
+grant all on public.dg_usage to service_role;
+
+-- 보관 +1GB (산 날의 요금제 끝 날까지)
+create table if not exists public.dg_store_packs (
+  id         bigserial primary key,
+  desk_id    uuid not null references public.dg_desks(id) on delete cascade,
+  bytes      bigint not null,
+  until      timestamptz not null,
+  payment_id uuid,
+  created_at timestamptz not null default now()
+);
+alter table public.dg_store_packs enable row level security;
+revoke all on public.dg_store_packs from anon, authenticated;
+grant all on public.dg_store_packs to service_role;
+
 -- ② 요금제 계산 -----------------------------------------------------------
 create or replace function public._dg_rank(p text) returns int language sql immutable as $$
   select case p when 'premium' then 3 when 'plus' then 2 else 1 end
@@ -76,6 +110,30 @@ create or replace function public._dg_plan(d dg_desks) returns text language sql
   select case when d.until > now() then coalesce(d.plan, 'basic') else 'basic' end
 $$;
 
+create or replace function public._dg_ym() returns text language sql stable as $$
+  select to_char(now() at time zone 'Asia/Seoul', 'YYYY-MM')
+$$;
+-- 이번 달 한도 · 쓴 양 (분 · 바이트)
+create or replace function public._dg_quota(d dg_desks) returns jsonb language sql stable security definer set search_path = public as $$
+  with u as (select coalesce(sum(voice_secs), 0) vs, coalesce(sum(video_secs), 0) ws, coalesce(sum(voice_extra), 0) ve, coalesce(sum(video_extra), 0) we
+               from dg_usage where desk_id = d.id and ym = _dg_ym()),
+       r as (select _dg_rank(_dg_plan(d)) k)
+  select jsonb_build_object(
+    'voice_lim', case when r.k >= 2 then 600 + u.ve else 0 end,
+    'voice_used', ceil(u.vs / 60.0)::int,
+    'video_lim', case when r.k >= 3 then 100 + u.we else 0 end,
+    'video_used', ceil(u.ws / 60.0)::int,
+    'bytes_quota', case when r.k >= 3 then 6442450944 when r.k = 2 then 3221225472 else 0 end
+                   + coalesce((select sum(bytes) from dg_store_packs p where p.desk_id = d.id and p.until > now()), 0),
+    'bytes_used', coalesce((select sum(coalesce((o.metadata->>'size')::bigint, 0)) from storage.objects o
+                              where o.bucket_id = 'dangol_chat' and o.name like d.id::text || '/%'), 0))
+  from u, r
+$$;
+create or replace function public._dg_left(d dg_desks, p_video boolean) returns boolean language sql stable as $$
+  select case when p_video then (q->>'video_used')::int < (q->>'video_lim')::int else (q->>'voice_used')::int < (q->>'voice_lim')::int end
+    from (select _dg_quota(d) q) x
+$$;
+
 -- 가게 정보 (14 의 것 + 요금제 · 사진 · 통화 가능 여부)
 create or replace function public._dg_desk_json(d dg_desks) returns jsonb language sql stable as $$
   select jsonb_build_object('code', d.code, 'name', d.name, 'category', d.category, 'intro', d.intro, 'hours', d.hours,
@@ -86,14 +144,14 @@ create or replace function public._dg_desk_json(d dg_desks) returns jsonb langua
     'off_days', to_jsonb(d.off_days), 'off_msg', d.off_msg, 'away', _dg_away(d),
     'plan', _dg_plan(d), 'call_on', d.call_on,
     'media', _dg_rank(_dg_plan(d)) >= 2,
-    'call',  _dg_rank(_dg_plan(d)) >= 2 and d.call_on and not _dg_away(d),
-    'vcall', _dg_rank(_dg_plan(d)) >= 3 and d.call_on and not _dg_away(d))
+    'call',  _dg_rank(_dg_plan(d)) >= 2 and d.call_on and not _dg_away(d) and _dg_left(d, false),
+    'vcall', _dg_rank(_dg_plan(d)) >= 3 and d.call_on and not _dg_away(d) and _dg_left(d, true))
 $$;
 
 create or replace function public.dg_owner_desks()
 returns jsonb language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_agg(_dg_desk_json(d) || jsonb_build_object('id', d.id, 'status', d.status, 'until', d.until, 'live', _dg_live(d),
-           'plan_bought', d.plan,
+           'plan_bought', d.plan, 'usage', _dg_quota(d),
            'waiting', (select count(*) from dg_threads t where t.desk_id = d.id and t.status = 'open'),
            'unread', (select coalesce(sum(owner_unread), 0) from dg_threads t where t.desk_id = d.id)) order by d.created_at), '[]'::jsonb)
     from dg_desks d where d.owner_user_id = auth.uid() and d.status <> 'closed'
@@ -235,6 +293,8 @@ begin
       return jsonb_build_object('ok', false, 'error', 'too_many'); end if;
   end if;
   if _dg_rank(_dg_plan(d)) < 2 then return jsonb_build_object('ok', false, 'error', 'plan'); end if;
+  if (select (q->>'bytes_used')::bigint >= (q->>'bytes_quota')::bigint from (select _dg_quota(d) q) x) then
+    return jsonb_build_object('ok', false, 'error', 'full'); end if;
   insert into dg_media_tickets (path, desk_id, guest_hash, kind) values (d.id || '/' || p_path, d.id, h, p_kind);
   return jsonb_build_object('ok', true, 'path', d.id || '/' || p_path);
 end $$;
@@ -294,6 +354,7 @@ begin
   if _dg_rank(_dg_plan(d)) < (case when p_video then 3 else 2 end) then return jsonb_build_object('ok', false, 'error', 'plan'); end if;
   if not d.call_on then return jsonb_build_object('ok', false, 'error', 'call_off'); end if;
   if _dg_away(d) then return jsonb_build_object('ok', false, 'error', 'away'); end if;
+  if not _dg_left(d, coalesce(p_video, false)) then return jsonb_build_object('ok', false, 'error', 'quota'); end if;
   if (select count(*) from dg_calls c0 join dg_threads t on t.id = c0.thread_id where t.guest_hash = h and c0.created_at > now() - interval '1 hour') >= 6 then
     return jsonb_build_object('ok', false, 'error', 'too_many'); end if;
   -- 사장님이 이미 다른 통화 중이면
@@ -337,6 +398,11 @@ begin
        case p_state when 'done' then ' ' || (s / 60) || '분 ' || (s % 60) || '초'
                     when 'declined' then ' — 사장님이 지금 받기 어려워요' else ' — 부재중' end;
   insert into dg_msgs (thread_id, from_owner, body, kind, secs) values (c.thread_id, false, b, 'call', s);
+  if coalesce(s, 0) > 0 then   -- 이번 달 사용량에 더함 (건 날의 달)
+    insert into dg_usage (desk_id, ym, voice_secs, video_secs)
+    values (c.desk_id, to_char(c.created_at at time zone 'Asia/Seoul', 'YYYY-MM'), case when c.video then 0 else s end, case when c.video then s else 0 end)
+    on conflict (desk_id, ym) do update set voice_secs = dg_usage.voice_secs + excluded.voice_secs, video_secs = dg_usage.video_secs + excluded.video_secs;
+  end if;
   update dg_threads set updated_at = now(),
          owner_unread = owner_unread + case when p_state = 'missed' then 1 else 0 end,
          status = case when p_state = 'missed' then 'open' else status end
@@ -388,7 +454,34 @@ begin
      and k.token::text !~* '^[0-9a-f]{64,200}$' and k.token::text !~ '^[{h]';
 end $$;
 
--- ⑥ 권한 -----------------------------------------------------------------
+-- ⑥ 추가 구입 ---------------------------------------------------------------
+--   voice300 = 이번 달 음성 +300분 · video100 = 이번 달 영상 +100분(프리미엄형) · store1g = 보관 +1GB(요금제 끝 날까지)
+create or replace function public.dg_addon_ok(p_user uuid, p_desk uuid, p_addon text)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from dg_desks d where d.id = p_desk and d.owner_user_id = p_user and d.status = 'active' and d.until > now()
+                   and _dg_rank(_dg_plan(d)) >= case p_addon when 'video100' then 3 when 'voice300' then 2 when 'store1g' then 2 else 99 end)
+$$;
+create or replace function public.dg_grant_addon(p_user uuid, p_desk uuid, p_payment uuid, p_source text, p_addon text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare d dg_desks; l dg_pay_log;
+begin
+  select * into l from dg_pay_log where payment_id = p_payment;
+  if l.payment_id is not null then return jsonb_build_object('ok', l.desk_id = p_desk, 'already', true); end if;
+  if not dg_addon_ok(p_user, p_desk, p_addon) then return jsonb_build_object('ok', false, 'error', 'addon_not_allowed'); end if;
+  select * into d from dg_desks where id = p_desk for update;
+  if p_addon in ('voice300', 'video100') then
+    insert into dg_usage (desk_id, ym, voice_extra, video_extra)
+    values (p_desk, _dg_ym(), case when p_addon = 'voice300' then 300 else 0 end, case when p_addon = 'video100' then 100 else 0 end)
+    on conflict (desk_id, ym) do update set voice_extra = dg_usage.voice_extra + excluded.voice_extra, video_extra = dg_usage.video_extra + excluded.video_extra;
+  else
+    insert into dg_store_packs (desk_id, bytes, until, payment_id) values (p_desk, 1073741824, d.until, p_payment);
+  end if;
+  insert into dg_pay_log (payment_id, desk_id, user_id, months, until_after, source, plan)
+  values (p_payment, p_desk, p_user, 0, d.until, p_source, p_addon);
+  return jsonb_build_object('ok', true, 'addon', p_addon, 'usage', _dg_quota(d));
+end $$;
+
+-- ⑦ 권한 -----------------------------------------------------------------
 do $$
 declare f text;
 begin
@@ -405,7 +498,8 @@ begin
   foreach f in array array['dg_grant_plan(uuid, uuid, int, uuid, text, text)', 'dg_grant_paid(uuid, uuid, int, uuid, text)',
                            'dg_media_ticket(text, text, uuid, uuid, text, text)', 'dg_media_list(uuid, text, uuid)',
                            'dg_notify_call_targets(uuid, text)', '_dg_call_end(uuid, text)', '_dg_guest_thread(dg_desks, text, uuid, text)',
-                           '_dg_quote(dg_desks, text, int)'] loop
+                           '_dg_quote(dg_desks, text, int)', 'dg_addon_ok(uuid, uuid, text)', 'dg_grant_addon(uuid, uuid, uuid, text, text)',
+                           '_dg_quota(dg_desks)', '_dg_left(dg_desks, boolean)'] loop
     execute 'revoke execute on function public.' || f || ' from public, anon, authenticated';
     execute 'grant execute on function public.' || f || ' to service_role';
   end loop;

@@ -41,7 +41,7 @@ const PAYPAL_CLIENT_SECRET = Deno.env.get('PAYPAL_CLIENT_SECRET') || '';
 const PAYPAL_API = (Deno.env.get('PAYPAL_MODE') || 'sandbox') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
 
 type Sku = { kind: 'emergency' | 'line' | 'pro' | 'listing' | 'usage' | 'number' | 'baroka' | 'dangol' | 'dantok'; baroka?: 'reg' | 'change' | 'g20' | 'g60'; months: number; nominal: number; price: number; tier?: string;
-             persons?: 2 | 4; capGb?: number; ocrPro?: boolean; dgPlan?: 'basic' | 'plus' | 'premium' };
+             persons?: 2 | 4; capGb?: number; ocrPro?: boolean; dgPlan?: 'basic' | 'plus' | 'premium'; dgAddon?: 'voice300' | 'video100' | 'store1g' };
 
 /* 🔴 화면 · Play Console 과 **같아야** 합니다. 지운 번호는 다시 못 씁니다. */
 const SKUS: Record<string, Sku> = {
@@ -95,6 +95,13 @@ const SKUS: Record<string, Sku> = {
   garim_dangol_premium_1y: { kind: 'dangol', months: 12, nominal: 12, price: 33000, dgPlan: 'premium' },   // 🏪 2026-11-17 프리미엄형
   dangol_plus_1y:          { kind: 'dangol', months: 12, nominal: 12, price: 19800, dgPlan: 'plus' },
   dangol_premium_1y:       { kind: 'dangol', months: 12, nominal: 12, price: 33000, dgPlan: 'premium' },
+  /* 🏪 2026-11-17 단골창구 추가 구입 — 음성 +300분 · 영상 +100분(그달 말까지) · 보관 +1GB(요금제 끝까지). 여러 번 살 수 있음(소모성) */
+  garim_dangol_voice_300: { kind: 'dangol', months: 1, nominal: 1, price: 3300, dgAddon: 'voice300' },
+  garim_dangol_video_100: { kind: 'dangol', months: 1, nominal: 1, price: 3300, dgAddon: 'video100' },
+  garim_dangol_store_1g:  { kind: 'dangol', months: 1, nominal: 1, price: 1100, dgAddon: 'store1g' },
+  dangol_voice_300:       { kind: 'dangol', months: 1, nominal: 1, price: 3300, dgAddon: 'voice300' },
+  dangol_video_100:       { kind: 'dangol', months: 1, nominal: 1, price: 3300, dgAddon: 'video100' },
+  dangol_store_1g:        { kind: 'dangol', months: 1, nominal: 1, price: 1100, dgAddon: 'store1g' },
   /* 💬 2026-11-17 단톡방 dantok.kr */
   dantok_room_1y:  { kind: 'dantok', months: 12, nominal: 12, price: 9900 },
   dantok_room_10g: { kind: 'dantok', months: 12, nominal: 12, price: 7900 },
@@ -271,7 +278,7 @@ const NAME: Record<string, string> = {
   ac_pro_business_1m: '프로 비즈니스 1개월', ac_pro_business_6m: '프로 비즈니스 6개월', ac_pro_business_12m: '프로 비즈니스 12개월',
   ac_pro_enterprise_1m: '프로 엔터프라이즈 1개월', ac_pro_enterprise_6m: '프로 엔터프라이즈 6개월', ac_pro_enterprise_12m: '프로 엔터프라이즈 12개월',
   ac_listing_1m: '공개 업체 목록 게재 1개월', ac_listing_6m: '공개 업체 목록 게재 6개월', ac_listing_12m: '공개 업체 목록 게재 12개월',
-  ac_usage_1gb_3m: '추가 사용량 1GB', garim_dangol_1y: '단골창구 개설료 1년', dangol_1y: '단골창구 개설료 1년', garim_dangol_plus_1y: '단골창구 실용형 1년', garim_dangol_premium_1y: '단골창구 프리미엄형 1년', dangol_plus_1y: '단골창구 실용형 1년', dangol_premium_1y: '단골창구 프리미엄형 1년',
+  ac_usage_1gb_3m: '추가 사용량 1GB', garim_dangol_1y: '단골창구 개설료 1년', dangol_1y: '단골창구 개설료 1년', garim_dangol_plus_1y: '단골창구 실용형 1년', garim_dangol_premium_1y: '단골창구 프리미엄형 1년', garim_dangol_voice_300: '단골창구 음성 통화 +300분', garim_dangol_video_100: '단골창구 영상 통화 +100분', garim_dangol_store_1g: '단골창구 보관 +1GB', dangol_voice_300: '단골창구 음성 통화 +300분', dangol_video_100: '단골창구 영상 통화 +100분', dangol_store_1g: '단골창구 보관 +1GB', dangol_plus_1y: '단골창구 실용형 1년', dangol_premium_1y: '단골창구 프리미엄형 1년',
   dantok_room_1y: '단톡방 이용 1년', dantok_room_10g: '단톡방 저장 10GB 1년', dantok_gal_5g: '단톡방 갤러리 5GB 1년', dantok_gal_15g: '단톡방 갤러리 15GB 1년',
   ac_num_4_basic: '회선번호 4자리', ac_num_4_good: '좋은 회선번호 4자리', ac_num_5_basic: '회선번호 5자리', ac_num_5_good: '좋은 회선번호 5자리',
   ac_num_6_basic: '회선번호 6자리', ac_num_6_good: '좋은 회선번호 6자리', ac_num_7_basic: '회선번호 7자리', ac_num_7_good: '좋은 회선번호 7자리',
@@ -315,6 +322,10 @@ async function precheck(userId: string, sku: Sku, o: Opts): Promise<string | nul
   if (sku.kind === 'dangol') {   // 🏪 2026-11-15 — 내 단골창구인지
     const { data } = o.usageTargetId ? await supabase.rpc('dg_can_pay', { p_user: userId, p_desk: String(o.usageTargetId) }) : { data: false };
     if (!data) return '단골창구를 찾을 수 없습니다. 화면을 새로 고친 뒤 다시 눌러 주세요.';
+    if (sku.dgAddon) {   // 추가 구입은 그 요금제를 쓰는 중일 때만(영상은 프리미엄형)
+      const { data: ok2 } = await supabase.rpc('dg_addon_ok', { p_user: userId, p_desk: String(o.usageTargetId), p_addon: sku.dgAddon });
+      if (!ok2) return sku.dgAddon === 'video100' ? '영상 통화 추가는 프리미엄형을 쓰는 중일 때 살 수 있어요.' : '추가 구입은 실용형 · 프리미엄형을 쓰는 중일 때 살 수 있어요.';
+    }
   }
   if (sku.kind === 'usage') {
     if (!o.usageTargetId) return '추가 사용량을 붙일 회선을 골라주세요.';
@@ -377,10 +388,12 @@ async function fulfill(pay: any) {
   }
   /* 🏪 2026-11-15 — 단골창구 개설료: 고른 단골창구에 기간만 넣고 끝 */
   if (sku.kind === 'dangol') {
-    const { data: g, error: ge } = await supabase.rpc('dg_grant_plan', { p_user: userId, p_desk: String(o.usageTargetId || ''), p_months: sku.months, p_payment: pay.id, p_source: pay.method, p_plan: sku.dgPlan || 'basic' });
+    const { data: g, error: ge } = (sku.dgAddon
+      ? await supabase.rpc('dg_grant_addon', { p_user: userId, p_desk: String(o.usageTargetId || ''), p_payment: pay.id, p_source: pay.method, p_addon: sku.dgAddon })
+      : await supabase.rpc('dg_grant_plan', { p_user: userId, p_desk: String(o.usageTargetId || ''), p_months: sku.months, p_payment: pay.id, p_source: pay.method, p_plan: sku.dgPlan || 'basic' }));
     if (ge || !g || !g.ok) throw new Error('단골창구 기간을 넣지 못했습니다(' + (ge?.message || g?.error) + '). 고객센터에서 도와드립니다.');
     await supabase.from('payments').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', pay.id);
-    return { ok: true, kind: 'dangol', months: sku.months, until: g.until, plan: g.plan, bonusDays: g.bonus_days };
+    return { ok: true, kind: 'dangol', months: sku.months, until: g.until, plan: g.plan, bonusDays: g.bonus_days, addon: g.addon || null };
   }
   let hotline: any = null, extended = false, sub: any = null;
   if (sku.kind === 'line') {

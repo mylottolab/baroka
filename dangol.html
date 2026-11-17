@@ -213,7 +213,7 @@ async function desk(code){
       (d.call || d.vcall ? '<div class="card"><b class="h">📞 ' + T('사장님과 바로 통화', 'Call the owner') + '</b><p>' + T('전화번호 없이 인터넷으로 통화해요. 서로 번호가 보이지 않아요.', 'Talk over the internet — no phone numbers are shared.') + '</p>' +
         '<div class="callbar">' + (d.call ? '<button class="btn" id="vc" type="button">📞 ' + T('음성 통화', 'Voice call') + '</button>' : '') +
         (d.vcall ? '<button class="btn c" id="vv" type="button">🎥 ' + T('영상 통화', 'Video call') + '</button>' : '') + '</div></div>'
-       : (d.plan && d.plan !== 'basic' && (d.away || !d.call_on) ? '<div class="card aw"><p>📞 ' + T('지금은 사장님이 통화를 받지 않아요. 글로 남겨 주세요.', 'The owner is not taking calls now. Please leave a message.') + '</p></div>' : '')) +
+       : (d.plan && d.plan !== 'basic' ? '<div class="card aw"><p>📞 ' + T('지금은 사장님이 통화를 받지 않아요. 글로 남겨 주세요.', 'The owner is not taking calls now. Please leave a message.') + '</p></div>' : '')) +
     '<div style="text-align:center"><button class="link" id="report" type="button">🚩 ' + T('이 가게 신고하기', 'Report this shop') + '</button></div>' +
     '<p class="foot"><a href="dangol.html" style="color:inherit">' + T('단골창구 입구', 'Dangol home') + '</a> · ' + T(DGHOST ? '단골창구 · dangol.org' : '단골창구 by 가림콜', 'Dangol · dangol.org') + '</p>';
   A.innerHTML = h;
@@ -357,7 +357,7 @@ async function sendMedia(f){
     await loadThread(r.thread);
   } catch (e) {
     var c = e && e.error;
-    toast(c === 'plan' ? T('이 가게는 지금 사진을 받지 않아요.', 'This shop is not accepting photos now.') : c === 'too_many' ? T('잠시 뒤에 다시 보내 주세요.', 'Please try again in a moment.') : T('보내지 못했어요. 다시 해 주세요.', 'Could not send. Please try again.'));
+    toast(c === 'full' ? T('가게 보관함이 가득 차서 지금은 사진을 받을 수 없어요. 글로 남겨 주세요.', 'The shop’s storage is full. Please send a message instead.') : c === 'plan' ? T('이 가게는 지금 사진을 받지 않아요.', 'This shop is not accepting photos now.') : c === 'too_many' ? T('잠시 뒤에 다시 보내 주세요.', 'Please try again in a moment.') : T('보내지 못했어요. 다시 해 주세요.', 'Could not send. Please try again.'));
   } finally { if (btn) { btn.disabled = false; btn.textContent = '📷 ' + T('사진 · 동영상 보내기', 'Send photo / video'); } }
 }
 /* ── 📞 번호 없는 통화 (dangol_call.js) ── */
