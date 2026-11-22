@@ -1,6 +1,6 @@
 -- =====================================================================
 -- 💬 단톡방 — 🙋 자기소개 · 인사 코너 (2026-11-23)
---   방마다 사람마다 소개 하나: 소개 글(500자) + 사진 또는 짧은 영상(30초) 하나.
+--   방마다 사람마다 소개 하나: 소개 글(500자) + 사진 또는 짧은 영상(20초 · 20MB) 하나.
 --   목록은 카톡처럼 왼쪽 동그라미(사진 · 영상 · 프로필) + 오른쪽 별명 · 소개 글. 위에서 줄 세우기(들어온 순 · 최근 소개 · 이름순).
 --   · 사진 · 영상은 보관함 dantok 의 "<방번호>/intro/<내 번호>-<시각>.<확장자>" — 그 방 사람만 봅니다(기존 방 칸 정책 그대로).
 --   · 처음 소개를 올리면 방에 「○○님이 자기소개를 올렸어요 🙋」 알림 글이 한 줄 뜹니다.
@@ -50,7 +50,7 @@ begin
   if p_kind is not null and p_kind not in ('photo', 'video') then return jsonb_build_object('ok', false, 'error', 'bad_kind'); end if;
   if (p_kind is null) <> (p_path is null) then return jsonb_build_object('ok', false, 'error', 'bad_path'); end if;
   if p_path is not null and p_path not like (p_room::text || '/intro/' || me::text || '-%') then return jsonb_build_object('ok', false, 'error', 'bad_path'); end if;
-  if p_kind = 'video' and coalesce(p_secs, 0) > 31 then return jsonb_build_object('ok', false, 'error', 'too_long'); end if;
+  if p_kind = 'video' and coalesce(p_secs, 0) > 21 then return jsonb_build_object('ok', false, 'error', 'too_long'); end if;
   if b = '' and p_path is null then return jsonb_build_object('ok', false, 'error', 'empty'); end if;
   select * into old from dt_intros where room_id = p_room and user_id = me;
   insert into dt_intros(room_id, user_id, body, media_kind, media_path, media_secs, updated_at)
