@@ -213,8 +213,8 @@ async function desk(code){
   }
   h += '<div id="thread"></div>' +
     '<div class="card" id="askCard"><b class="h">💬 ' + T('사장님께 묻기', 'Ask the owner') + '</b><p>' + T('전화번호는 필요 없어요. 사장님이 답하면 이 화면과 「단골창구 입구 → 내가 물어본 가게」에서 보입니다.', 'No phone number needed. The owner’s reply will appear on this page and in “Shops I asked” on the Dangol home.') + '</p>' +
-      '<input id="nm" maxlength="20" placeholder="' + T('부를 이름 (선택 · 예: 3번 테이블, 김OO)', 'Your name (optional, e.g. Table 3, Emma)') + '" aria-label="' + T('부를 이름', 'Your name') + '">' +
-      '<textarea id="body" maxlength="1000" placeholder="' + T('예) 오늘 저녁 6시에 4명 자리 있을까요?', 'e.g. Do you have a table for 4 at 6 pm today?') + '" aria-label="' + T('물어볼 내용', 'Your question') + '"></textarea>' +
+      '<input id="nm" maxlength="20" placeholder="' + T('여기에 고객님의 호칭을 적어 주세요 (선택)', 'Your name here (optional)') + '" aria-label="' + T('부를 이름', 'Your name') + '">' +
+      '<textarea id="body" maxlength="1000" placeholder="' + T('문의사항을 여기에 적어 주세요', 'Write your question here') + '" aria-label="' + T('물어볼 내용', 'Your question') + '"></textarea>' +
       '<button class="btn c" id="send" type="button">' + T('보내기', 'Send') + '</button>' +
       (d.media ? '<div class="tools"><button class="btn g" id="pick" type="button">📷 ' + T('사진 · 동영상 보내기', 'Send photo / video') + '</button></div>' +
         '<input type="file" id="file" accept="' + (window.DGCall && DGCall.oldIOSApp() ? 'image/*' : 'image/*,video/*') + '" hidden><p style="font-size:13px;margin:0">' + T('부품 · 상품 사진을 찍어 보내면 사장님이 바로 알아봐요. 동영상은 30초까지.', 'Send a photo of the item you need. Videos up to 30 seconds.') + '</p>' : '') +
