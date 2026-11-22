@@ -111,6 +111,44 @@ async function sendOne(projectId: string, accessToken: string, token: string, pa
   return { ok: res.ok, status: res.status, out: out };
 }
 
+
+/* ── 🔴 2026-11-22 알림에서 바로 [답장] · [읽음] ─────────────────────────
+   받는 사람마다 1회용 답장 열쇠(사람 · 방 · 7일)를 서명해 알림에 싣습니다(서명 열쇠 = 서버 비밀값, 새 비밀값 없음).
+   · 새 안드로이드 앱(dt_push.platform 에 qr1) → data 만 → 앱이 위에 뜨는 알림 + [읽음] [답장]
+   · 아이폰 → category 'QR' (새 앱이면 [답장] 칸, 옛 앱은 무시) · 옛 안드로이드 → 예전 그대로
+   답장은 dantok-quick-reply 가 받습니다. */
+function b64urlS(s: string) { return b64url(new TextEncoder().encode(s)); }
+async function qrToken(user: string, room: string): Promise<string> {
+  const body = b64urlS(user + '|' + room + '|' + String(Math.floor(Date.now() / 1000) + 7 * 86400));
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(SERVICE), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return body + '.' + b64url(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode('dtqr1|' + body))));
+}
+async function pushInfo(admin: any, tokens: string[]): Promise<Record<string, any>> {
+  const m: Record<string, any> = {};
+  try { const r = await admin.from('dt_push').select('user_id, token, platform').in('token', tokens); for (const x of r.data || []) m[x.token] = x; } catch (_e) {}
+  return m;
+}
+async function dtPayload(r: any, info: any): Promise<any> {
+  const title = '💬 ' + r.room_name;
+  const text = (r.nick || '') + ': ' + String(r.preview || '').replace(/\s+/g, ' ');
+  const url = 'room.html?r=' + r.room_id;
+  const base: any = {
+    notification: { title, body: text },
+    data: { kind: 'dantok', room: String(r.room_id), url: url, title, body: text },
+    android: { priority: 'HIGH', notification: { channel_id: 'dantok_msg', sound: 'default', tag: 'dt-' + r.room_id } },
+    apns: { headers: { 'apns-priority': '10', 'apns-push-type': 'alert', 'apns-collapse-id': 'dt-' + r.room_id },
+            payload: { aps: { sound: 'default', 'thread-id': 'dt-' + r.room_id } } },
+  };
+  if (!info || !info.user_id) return base;
+  const qr = await qrToken(String(info.user_id), String(r.room_id));
+  const qrUrl = SUPABASE_URL + '/functions/v1/dantok-quick-reply';
+  if (String(info.platform || '').indexOf('qr1') >= 0) {
+    return { data: { kind: 'message', link_id: String(r.room_id), url: url, title, body: text, qr, qr_url: qrUrl }, android: { priority: 'HIGH' } };
+  }
+  base.data.qr = qr; base.data.qr_url = qrUrl; base.apns.payload.aps.category = 'QR';
+  return base;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
@@ -132,20 +170,11 @@ Deno.serve(async (req) => {
     const at = await getGoogleToken(sa);
     let sent = 0;
     const dead: string[] = [];
+    const INFO = await pushInfo(admin, rows.map((r: any) => r.token));   // 🔴 2026-11-22 답장 열쇠용
     // 300명 방도 있으니 20대씩 나눠 한꺼번에 보냅니다
     for (let i = 0; i < rows.length; i += 20) {
       const part = rows.slice(i, i + 20);
-      const outs = await Promise.all(part.map((r: any) => {
-        const title = '💬 ' + r.room_name;
-        const text = (r.nick || '') + ': ' + String(r.preview || '').replace(/\s+/g, ' ');
-        return sendOne(sa.project_id, at, r.token, {
-          notification: { title, body: text },
-          data: { kind: 'dantok', room: String(r.room_id), url: 'room.html?r=' + r.room_id, title, body: text },
-          android: { priority: 'HIGH', notification: { channel_id: 'dantok_msg', sound: 'default', tag: 'dt-' + r.room_id } },
-          apns: { headers: { 'apns-priority': '10', 'apns-push-type': 'alert', 'apns-collapse-id': 'dt-' + r.room_id },
-                  payload: { aps: { sound: 'default', 'thread-id': 'dt-' + r.room_id } } },
-        });
-      }));
+      const outs = await Promise.all(part.map(async (r: any) => sendOne(sa.project_id, at, r.token, await dtPayload(r, INFO[r.token]))));
       outs.forEach((o: any, k: number) => {
         if (o.ok) sent++;
         else if (o.status === 404 || /UNREGISTERED|registration-token-not-registered/i.test(JSON.stringify(o.out))) dead.push(part[k].token);
