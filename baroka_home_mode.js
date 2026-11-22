@@ -5,7 +5,7 @@
    · 이 폰만 시험: home.html?try=1 을 한 번 열기 · 새 화면 아래 [예전 첫 화면으로] 로 원래대로
    ===================================================================== */
 (function(){
-  var ALL = 'classic';   // ← 전체 전환 스위치: 'classic' | 'new'
+  var ALL = 'new';   // 2026-11-22 전체 적용(되돌리려면 'classic')   // ← 전체 전환 스위치: 'classic' | 'new'
   var m = ALL;
   try { var l = localStorage.getItem('baroka_home_mode'); if (l === 'new' || l === 'classic') m = l; } catch (e) {}
   window.BAROKA_HOME = m;
