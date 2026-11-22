@@ -14,6 +14,9 @@
 <script src="baroka_i18n.js?v=20261105"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="baroka_home_mode.js?v=20261122a"></script>
+<script>/* 🚗 2026-11-22 새 첫 화면(시안) — 스위치가 'new' 이면 home.html 로(찾던 번호 ?p= 는 그대로 넘김) */
+try { if (window.BAROKA_HOME === 'new') location.replace('home.html' + location.search); } catch (e) {}</script>
 </head>
 <body>
 <div class="bk-shell">

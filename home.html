@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>바로카</title>
+<meta name="theme-color" content="#13214A">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="baroka_icon_192.png">
+<link rel="apple-touch-icon" href="baroka_icon_192.png">
+<link rel="stylesheet" href="baroka.css?v=20261109">
+<script src="baroka_i18n.js?v=20261105"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+/* 🚗 바로카 새 첫 화면 시안 (2026-11-22) — 시그니처 = 자동차 번호판
+   ① 맨 위 「지금 할 일」: 차주에게 온 연락이 있으면 가장 먼저 크게
+   ② 두 갈래: [🔎 차주에게 연락] (찾아온 분 · 가입 없이) / [🚗 내 차] (차주)
+   ③ 내 차: 번호판 카드 + 세 칸(받은 연락 · 스티커 · 차 관리) + 처음 설정 3단계(등록 → 붙이기 → 시험 연락)
+   예전 첫 화면(index.html)의 찾기 · 번호판 찍기 · QR 찍기 · 앱 받기 · 갤러리 · 광고는 그대로 */
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bk-card);border:2px solid var(--bk-line);border-radius:16px;padding:4px;gap:4px}
+.seg button{border:0;background:none;border-radius:12px;height:50px;font:inherit;font-size:16px;font-weight:900;color:var(--bk-sub);cursor:pointer;position:relative}
+.seg button.on{background:var(--bk-navy);color:#fff}
+.seg .dot{position:absolute;top:6px;right:10px;min-width:20px;height:20px;border-radius:10px;background:#E5484D;color:#fff;font-size:11.5px;display:none;place-items:center;padding:0 5px}
+.seg .dot.on{display:grid}
+.todo{display:flex;align-items:center;gap:12px;background:#FFF4D6;border:2px solid var(--bk-yel);border-radius:18px;padding:14px 16px;text-decoration:none;color:#1B1400}
+.todo b{font-size:17px;display:block}.todo span{font-size:13.5px}
+.todo i{font-style:normal;font-size:30px}.todo em{margin-left:auto;font-style:normal;font-weight:900;white-space:nowrap}
+.cars{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
+.cars::-webkit-scrollbar{display:none}
+.car{flex:0 0 100%;scroll-snap-align:start;background:linear-gradient(160deg,var(--bk-navy),#1F3478);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px;color:#fff;min-width:0}
+.car .meta{font-size:13.5px;opacity:.9}
+.car .bk-plate input{pointer-events:none}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.three a,.three button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:84px;border-radius:14px;border:0;background:rgba(255,255,255,.12);color:#fff;font:inherit;font-weight:800;font-size:13.5px;text-decoration:none;cursor:pointer;text-align:center}
+.three i{font-style:normal;font-size:24px}
+.three .n{position:absolute;top:6px;right:8px;min-width:20px;height:20px;border-radius:10px;background:#E5484D;color:#fff;font-size:11.5px;display:grid;place-items:center;padding:0 5px}
+.pager{display:flex;justify-content:center;gap:6px}.pager i{width:7px;height:7px;border-radius:50%;background:var(--bk-line)}.pager i.on{background:var(--bk-navy)}
+.setup ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.setup li{display:flex;gap:12px;align-items:flex-start}
+.setup li .k{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:900;background:var(--bk-blue-soft);color:var(--bk-blue)}
+.setup li.done .k{background:var(--bk-ok);color:#fff}
+.setup li .t{flex:1;min-width:0}.setup li .t b{display:block;font-size:15.5px}.setup li .t span{font-size:13px;color:var(--bk-sub)}
+.setup li.done .t b{text-decoration:line-through;color:var(--bk-sub)}
+.setup li button,.setup li a.go{flex:0 0 auto;align-self:center;border:2px solid var(--bk-blue);color:var(--bk-blue);background:none;border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;font-weight:900;cursor:pointer;text-decoration:none;white-space:nowrap}
+.setup .bar{height:8px;border-radius:4px;background:var(--bk-line);overflow:hidden}.setup .bar i{display:block;height:100%;background:var(--bk-ok)}
+.ready{background:#E6F6EE;border:2px solid var(--bk-ok);color:#0B4D2D;border-radius:16px;padding:12px 14px;font-weight:800;font-size:14.5px;text-align:center}
+.uses{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.uses div{border-radius:12px;padding:4px 2px;opacity:.9;font-size:12.5px;line-height:1.4;text-align:center}
+.uses b{display:block;font-size:20px}
+.trybar{background:var(--bk-blue-soft);border-radius:12px;padding:8px 12px;font-size:12.5px;color:var(--bk-sub);text-align:center}
+.backold{background:none;border:0;color:var(--bk-sub);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:8px;align-self:center}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="bk-shell">
+  <aside class="bk-rail"><div class="bk-ads" data-n="5"></div></aside>
+  <main class="bk-main">
+    <header class="bk-top">
+      <a class="bk-logo" href="home.html" aria-label="바로카 처음 화면">
+        <span class="mk"><i></i><b>바로</b></span><span class="nm">바로<em>카</em></span>
+      </a>
+      <a class="bk-pill" href="my.html">⚙ 차 관리</a>
+    </header>
+    <div id="trybar" class="trybar" hidden></div>
+
+    <!-- ① 지금 할 일 -->
+    <a class="todo" id="todo" href="inbox.html" hidden><i>📨</i><span><b id="todoT"></b><span>상대는 답을 기다리고 있어요. 전화 · 문자로 바로 답할 수 있어요.</span></span><em>보기 ›</em></a>
+
+    <!-- ② 두 갈래 -->
+    <div class="seg" role="tablist">
+      <button type="button" data-tab="find" role="tab">🔎 차주에게 연락</button>
+      <button type="button" data-tab="mine" role="tab">🚗 내 차<span class="dot" id="segDot"></span></button>
+    </div>
+
+    <!-- 차주에게 연락 (찾아온 분) -->
+    <div id="pFind" style="display:flex;flex-direction:column;gap:14px">
+      <section class="bk-hero">
+        <h1>차 번호만 알면<br>차주에게 바로 연락</h1>
+        <p>가입 없이 · 전화 · 문자 · 사진. 서로 전화번호는 보이지 않아요.</p>
+        <label class="bk-plate" aria-label="차 번호">
+          <span class="band"><span>KOR</span></span>
+          <input id="plate" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="14" placeholder="12가 3456">
+        </label>
+        <button class="bk-btn yel" id="go">차주 찾기</button>
+        <div class="bk-row">
+          <button class="bk-btn line-w sm" id="shoot">📷 번호판 찍기</button>
+          <button class="bk-btn line-w sm" id="qr">▦ QR 찍기</button>
+        </div>
+        <div class="uses">
+          <div><b>🚗</b>차를 막았을 때</div><div><b>💡</b>라이트 · 창문</div><div><b>📸</b>접촉 · 긁힘</div>
+        </div>
+      </section>
+      <div class="bk-msg" id="msg"></div>
+      <section class="bk-res" id="res"></section>
+    </div>
+
+    <!-- 내 차 (차주) -->
+    <div id="pMine" style="display:flex;flex-direction:column;gap:14px" hidden>
+      <div id="mineBody"></div>
+    </div>
+
+    <!-- 앱 받기(웹에서만) · 갤러리 · 광고 -->
+    <a class="bk-card" id="gpBox" href="https://play.google.com/store/apps/details?id=com.weaveapp.baroka" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:14px">
+      <span style="font-size:30px">▶</span><span style="flex:1"><b style="font-size:16px">안드로이드 앱 받기</b><br><span class="bk-sub">연락을 앱 알림으로 바로</span></span><span style="font-weight:900;color:var(--bk-blue)">받기 ›</span></a>
+    <a class="bk-card" id="asBox" href="https://apps.apple.com/kr/app/id6830146038" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:14px">
+      <span style="font-size:30px"></span><span style="flex:1"><b style="font-size:16px">아이폰 앱 받기</b><br><span class="bk-sub">연락을 앱 알림으로 바로</span></span><span style="font-weight:900;color:var(--bk-blue)">받기 ›</span></a>
+    <a class="bk-card" href="gallery.html" style="text-decoration:none;color:inherit;flex-direction:row;align-items:center;gap:14px">
+      <span style="font-size:30px">🚘</span><span style="flex:1"><b style="font-size:16px">차 갤러리</b><br><span class="bk-sub">내 차 자랑 · 풍경 · 관리 팁</span></span><span style="font-weight:900;color:var(--bk-blue)">구경 ›</span></a>
+    <div class="bk-ads-h bk-ads-inline"><span>광고</span></div>
+    <div class="bk-ads bk-ads-inline" data-n="2"></div>
+
+    <button type="button" class="backold" id="backOld">↩ 예전 첫 화면으로</button>
+    <footer class="bk-foot">
+      바로카 · 위브앱솔루션 · <a href="terms.html">이용약관</a> · <a href="privacy.html">개인정보처리방침</a> · <a href="refund.html">환불</a> · <a href="ad.html">광고 문의</a> · <a href="features.html">📘 전체 기능 소개</a> · <a href="support.html">💬 고객센터 · 문의</a>
+    </footer>
+  </main>
+  <aside class="bk-rail"><div class="bk-ads" data-n="5"></div></aside>
+</div>
+
+<script src="baroka.js?v=20261109"></script>
+<script src="aliascall_scan.js?v=20261102"></script>
+<script src="baroka_home_mode.js?v=20261122a"></script>
+<script>
+(async function(){
+  'use strict';
+  var $ = function(id){ return document.getElementById(id); };
+  try { if (/[?&]try=1/.test(location.search)) { localStorage.setItem('baroka_home_mode', 'new'); history.replaceState(null, '', 'home.html'); } } catch (e) {}
+  try { if (BK.isApp()) { $('gpBox').hidden = true; $('asBox').hidden = true; } } catch (e) {}
+  try { if (localStorage.getItem('baroka_home_mode') === 'new' && (window.BAROKA_HOME_ALL || 'classic') !== 'new') { $('trybar').hidden = false; $('trybar').textContent = '시험 중 — 이 폰만 새 첫 화면입니다'; } } catch (e) {}
+  $('backOld').onclick = function(){ try { localStorage.setItem('baroka_home_mode', 'classic'); } catch (e) {} location.replace('index.html'); };
+
+  /* ── 두 갈래 ── */
+  var TK = 'baroka_home_tab';
+  function tab(t){
+    [].forEach.call(document.querySelectorAll('.seg button'), function(b){ b.classList.toggle('on', b.dataset.tab === t); b.setAttribute('aria-selected', b.dataset.tab === t); });
+    $('pFind').hidden = t !== 'find'; $('pMine').hidden = t !== 'mine';
+    try { localStorage.setItem(TK, t); } catch (e) {}
+  }
+  [].forEach.call(document.querySelectorAll('.seg button'), function(b){ b.onclick = function(){ tab(b.dataset.tab); }; });
+  var saved = 'find'; try { saved = localStorage.getItem(TK) || 'find'; } catch (e) {}
+  tab(saved);
+
+  /* ── 차주 찾기 (예전 첫 화면과 같은 방식) ── */
+  var plate = $('plate'), res = $('res'), msg = $('msg');
+  function say(t, kind){ msg.className = 'bk-msg on ' + (kind || 'info'); msg.textContent = t; }
+  function hush(){ msg.className = 'bk-msg'; }
+  if (window.ACScan) ACScan.init({ sb: BK.sb, url: BK.URL, lang: function(){ return (BK.lang && BK.lang() === 'en') ? 'en' : 'ko'; } });
+  async function find(q){
+    hush(); res.innerHTML = '';
+    var k = BK.plateKey(q);
+    if (k.length < 4) { say('차 번호를 넣어 주세요. 뒤 네 자리만 넣어도 찾아요.', 'bad'); plate.focus(); return; }
+    $('go').disabled = true; $('go').textContent = '찾는 중…';
+    try {
+      var r = await BK.sb.rpc('search_plate', { p_plate: q, p_limit: 10 });
+      if (r.error) throw r.error;
+      var list = (r.data || []).filter(function(d){ return d.category === 'vehicle' && d.qr_code_token; });
+      if (!list.length) { say('이 번호로 등록된 차가 없어요.\n차주가 아직 바로카에 등록하지 않았을 수 있어요.', 'bad'); return; }
+      var exact = list.filter(function(d){ return BK.plateKey(d.search_key) === k; });
+      if (!exact.length && list.length > 1) say('정확히 같은 번호는 없고, 끝 네 자리가 같은 차예요. 맞는 차를 골라 주세요.');
+      res.innerHTML = list.map(function(d){
+        return '<a class="bk-car" href="connect.html?t=' + encodeURIComponent(d.qr_code_token) + '">' +
+          '<span class="pl">' + BK.esc(BK.plateNice(d.search_key)) + '</span>' +
+          '<span class="tx">' + (BK.plateKey(d.search_key) === k ? '이 차 차주에게 연락' : '끝 번호가 같은 차') + '</span><span class="go">연락 ›</span></a>';
+      }).join('');
+    } catch (e) { console.error(e); say('찾지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.', 'bad'); }
+    finally { $('go').disabled = false; $('go').textContent = '차주 찾기'; }
+  }
+  $('go').onclick = function(){ find(plate.value); };
+  plate.addEventListener('keydown', function(e){ if (e.key === 'Enter') find(plate.value); });
+  plate.addEventListener('blur', function(){ if (BK.plateOk(plate.value)) plate.value = BK.plateNice(plate.value); });
+  $('shoot').onclick = async function(){ if (!window.ACScan) return; var p = await ACScan.plate(); if (p) { tab('find'); plate.value = BK.plateNice(p); find(p); } };
+  $('qr').onclick = async function(){
+    if (!window.ACScan) return; var raw = await ACScan.qr(); if (!raw) return;
+    var t = null; try { t = new URL(raw).searchParams.get('t'); } catch (e) { t = /^[0-9a-f-]{36}$/i.test(raw) ? raw : null; }
+    if (t) location.href = 'connect.html?t=' + encodeURIComponent(t); else say('바로카 · 에일리어스콜 QR이 아니에요.', 'bad');
+  };
+  var q = new URLSearchParams(location.search).get('p');
+  if (q) { tab('find'); plate.value = BK.plateNice(q); find(q); }
+  BK.ads(Array.prototype.slice.call(document.querySelectorAll('.bk-ads')));
+
+  /* ── 내 차 ── */
+  var body = $('mineBody');
+  var regCard = function(lead){ return '<section class="bk-card">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><h2>' + lead + '</h2><span class="bk-tag y">월 요금 없음</span></div>' +
+      '<div class="bk-price"><b>2,500원</b><span>한 번 내면 끝 · 차 바꿀 때까지</span></div>' +
+      '<p class="bk-sub">등록하면 누가 내 차 번호로 연락해도 <b>제 전화번호는 보이지 않고</b> 앱 알림으로 받아요.</p>' +
+      '<a class="bk-btn blue" href="my.html?new=1">＋ 내 차 등록하기</a></section>'; };
+  var stepsPreview = '<section class="bk-card setup"><h2>이렇게 3단계면 끝</h2><ol>' +
+      '<li><span class="k">1</span><span class="t"><b>차 번호 등록</b><span>2,500원 한 번 · 월 요금 없음</span></span></li>' +
+      '<li><span class="k">2</span><span class="t"><b>QR 스티커 · 알림판 붙이기</b><span>인쇄해서 앞유리 · 대시보드에</span></span></li>' +
+      '<li><span class="k">3</span><span class="t"><b>시험 연락 보내 보기</b><span>내 폰에 알림이 오는지 한 번 확인</span></span></li></ol></section>';
+
+  var u = null; try { u = await BK.user(); } catch (e) {}
+  if (!u) {
+    body.innerHTML = regCard('내 차 등록하기') + stepsPreview +
+      '<a class="bk-btn ghost" href="my.html?login=1">이미 계정이 있어요 — 로그인</a>';
+    return;
+  }
+  var ST = null;
+  try { var r = await BK.sb.rpc('baroka_state'); if (!r.error && r.data && r.data.ok) ST = r.data; } catch (e) {}
+  if (!ST) { body.innerHTML = '<div class="bk-msg on bad">내 차 정보를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</div>'; return; }
+  var cars = ST.cars || [];
+  if (!cars.length) { body.innerHTML = regCard('첫 차를 등록하세요') + stepsPreview; return; }
+
+  /* 처음 설정 진행 (이 폰에 기억: 붙였어요 · 시험 연락) */
+  function flag(k, v){ try { if (v === undefined) return localStorage.getItem(k) === '1'; localStorage.setItem(k, '1'); } catch (e) { return false; } }
+  var unread = 0;
+  function draw(){
+    var html = '<div class="cars" id="cars">' + cars.map(function(c){
+      var meta = [c.make, c.color].filter(Boolean).join(' · ');
+      return '<div class="car"><label class="bk-plate" aria-label="내 차 번호"><span class="band"><span>KOR</span></span><input readonly tabindex="-1" value="' + BK.esc(BK.plateNice(c.plate)) + '"></label>' +
+        '<div class="meta">' + (meta ? BK.esc(meta) + ' · ' : '') + '바로카로 연락받는 중</div>' +
+        '<div class="three">' +
+          '<a href="inbox.html"><i>📨</i>받은 연락' + (unread ? '<span class="n">' + (unread > 9 ? '9+' : unread) + '</span>' : '') + '</a>' +
+          '<a href="my.html"><i>🏷</i>스티커 · 알림판</a>' +
+          '<a href="my.html"><i>⚙</i>차 관리</a>' +
+        '</div></div>'; }).join('') + '</div>' +
+      (cars.length > 1 ? '<div class="pager" id="pager">' + cars.map(function(_, i){ return '<i class="' + (i ? '' : 'on') + '"></i>'; }).join('') + '</div>' : '');
+    var c0 = cars[0], kStick = 'bk_setup_stick_' + c0.id, kTest = 'bk_setup_test_' + c0.id;
+    var s1 = true, s2 = flag(kStick), s3 = flag(kTest), done = [s1, s2, s3].filter(Boolean).length;
+    if (done < 3) {
+      html += '<section class="bk-card setup"><div style="display:flex;justify-content:space-between;align-items:center"><h2>처음 설정 ' + done + ' / 3</h2><span class="bk-sub">' + BK.esc(BK.plateNice(c0.plate)) + '</span></div>' +
+        '<div class="bar"><i style="width:' + Math.round(done / 3 * 100) + '%"></i></div><ol>' +
+        '<li class="done"><span class="k">✓</span><span class="t"><b>차 번호 등록</b><span>끝났어요</span></span></li>' +
+        '<li class="' + (s2 ? 'done' : '') + '"><span class="k">' + (s2 ? '✓' : '2') + '</span><span class="t"><b>QR 스티커 · 알림판 붙이기</b><span>[차 관리]에서 인쇄 → 앞유리 · 대시보드에</span></span>' +
+          (s2 ? '' : '<button type="button" id="sStick">붙였어요</button>') + '</li>' +
+        '<li class="' + (s3 ? 'done' : '') + '"><span class="k">' + (s3 ? '✓' : '3') + '</span><span class="t"><b>시험 연락 보내 보기</b><span>찾는 사람처럼 내 차에 문자 한 통 — 내 폰에 알림이 오면 성공</span></span>' +
+          (s3 ? '' : '<a class="go" id="sTest" href="connect.html?t=' + encodeURIComponent(c0.token) + '">보내 보기</a>') + '</li>' +
+        '</ol></section>';
+    } else {
+      html += '<div class="ready">✓ 준비 끝! 누가 ' + BK.esc(BK.plateNice(c0.plate)) + '으로 연락하면 알림으로 받아요</div>';
+    }
+    if (!BK.isApp()) html += '<div class="bk-msg on info" style="display:block">📱 알림은 <b>바로카 앱</b>에서 받아요. 아래에서 앱을 받아 같은 닉네임으로 로그인해 주세요.</div>';
+    html += '<a class="bk-btn ghost" href="my.html?new=1">＋ 차 한 대 더 등록하기</a>';
+    body.innerHTML = html;
+    var st = $('sStick'); if (st) st.onclick = function(){ flag(kStick, 1); draw(); };
+    var tt = $('sTest'); if (tt) tt.onclick = function(){ flag(kTest, 1); };
+    var cs = $('cars'), pg = $('pager');
+    if (cs && pg) cs.addEventListener('scroll', function(){ var i = Math.round(cs.scrollLeft / cs.clientWidth);
+      [].forEach.call(pg.children, function(d, j){ d.classList.toggle('on', i === j); }); }, { passive: true });
+  }
+  draw();
+
+  /* ── 지금 할 일: 답을 기다리는 연락 ── */
+  unread = await BK.unread($('segDot'));
+  if (unread) {
+    $('todo').hidden = false; $('todoT').textContent = '차주님, 연락이 ' + unread + '건 왔어요';
+    draw();
+    var tabSaved = null; try { tabSaved = sessionStorage.getItem('bk_tab_auto'); } catch (e) {}
+    if (!tabSaved && !q) { tab('mine'); try { sessionStorage.setItem('bk_tab_auto', '1'); } catch (e) {} }
+  }
+  /* 앱 아이콘을 누르면 바로 번호판 카메라(예전 첫 화면과 같음 · [차 관리]에서 끔) — 받은 연락이 없을 때만 */
+  try {
+    var first = !sessionStorage.getItem('bk_launched'); sessionStorage.setItem('bk_launched', '1');
+    if (first && !unread && !q && BK.standalone() && BK.launchScan() && !$('pFind').hidden) setTimeout(function(){ $('shoot').click(); }, 350);
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
