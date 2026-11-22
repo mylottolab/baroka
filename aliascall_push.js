@@ -125,6 +125,13 @@ const FCM_SYNC_KEY  = 'aliascall_fcm_synced';  // 🔴 2026-10-05 — 마지막�
        · 주소가 없거나 · 계정이 바뀌었거나 · 하루가 지났으면 다시 올립니다(서버가 같은 주소를 새 계정으로 옮김).
      알림 허락이 없으면 아무것도 묻지 않습니다(지금처럼 [긴급 알림 켜기] 로 묻습니다).
    ===================================================================== */
+
+/* 🔴 2026-11-22 — 새 앱이면(알림에서 바로 답장 qr1) 이 기기 줄에 적어 둡니다. 그 폰에만 위에 뜨는 답장 알림이 갑니다 */
+function _acCaps(){ try { if (window.AliasNative && typeof AliasNative.caps === 'function') return String(AliasNative.caps() || ''); } catch (e) {} return ''; }
+async function _acPushCaps(sb, token){
+  const c = _acCaps(); if (!c || !sb || !token) return;
+  try { await sb.rpc('set_push_caps', { p_token: token, p_caps: c }); localStorage.setItem('aliascall_fcm_caps', c); } catch (e) {}
+}
 let _autoPushBusy = false;
 async function aliascallAutoRegisterPush(sb){
   if (_autoPushBusy || !sb || typeof aliascallIsNativeApp !== 'function' || !aliascallIsNativeApp()) return;
@@ -138,7 +145,8 @@ async function aliascallAutoRegisterPush(sb){
     const owner = localStorage.getItem(FCM_OWNER_KEY);
     const synced = Number(localStorage.getItem(FCM_SYNC_KEY) || 0);
     const have = localStorage.getItem(FCM_TOKEN_KEY);
-    if (have && owner === session.user.id && Date.now() - synced < 24 * 3600 * 1000) return;   // 이미 맞음
+    let capsSaved = ''; try { capsSaved = localStorage.getItem('aliascall_fcm_caps') || ''; } catch (e) {}
+    if (have && owner === session.user.id && Date.now() - synced < 24 * 3600 * 1000 && capsSaved === _acCaps()) return;   // 이미 맞음 (🔴 2026-11-22 새 앱이면 다시)
 
     const token = await new Promise((resolve, reject) => {
       let done = false;
@@ -156,6 +164,7 @@ async function aliascallAutoRegisterPush(sb){
     localStorage.setItem(FCM_TOKEN_KEY, token);
     localStorage.setItem(FCM_OWNER_KEY, session.user.id);
     localStorage.setItem(FCM_SYNC_KEY, String(Date.now()));
+    await _acPushCaps(sb, token);
     console.log('[push] 폰 주소를 자동으로 등록했습니다');
   } catch (e) {
     console.warn('[push] 폰 주소 자동 등록 실패(다음에 다시 시도)', e);
@@ -356,6 +365,7 @@ async function _subscribeCoreNative(sb){
 
     localStorage.setItem(FCM_TOKEN_KEY, token);
     try { localStorage.setItem(FCM_OWNER_KEY, session.user.id); localStorage.setItem(FCM_SYNC_KEY, String(Date.now())); } catch (e) {}
+    await _acPushCaps(sb, token);
     return true;
   } catch (e) {
     console.error('[push] 앱 알림 등록 실패', e);

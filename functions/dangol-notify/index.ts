@@ -111,6 +111,36 @@ async function sendOne(projectId: string, accessToken: string, token: string, pa
   return { ok: res.ok, status: res.status, out: out };
 }
 
+
+/* ── 🔴 2026-11-22 알림에서 바로 [답장] · [읽음] (사장님께 가는 「새 문의」 알림) ─────────
+   사장님 기기마다 1회용 답장 열쇠(사장님 · 대화 · 7일)를 서명해 싣습니다(서명 열쇠 = 서버 비밀값, 새 비밀값 없음).
+   · 새 안드로이드 앱(push_tokens.caps 에 qr1) → data 만 → 앱이 위에 뜨는 알림 + [읽음] [답장]
+   · 아이폰 → category 'QR' · 옛 안드로이드 → 예전 그대로. 답장은 dangol-quick-reply 가 받습니다. */
+async function qrToken(owner: string, thread: string): Promise<string> {
+  const body = b64url(new TextEncoder().encode(owner + '|' + thread + '|' + String(Math.floor(Date.now() / 1000) + 7 * 86400)));
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(SERVICE), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return body + '.' + b64url(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode('dgqr1|' + body))));
+}
+async function ownerPayload(admin: any, thread: string, r: any, base: any): Promise<any> {
+  try {
+    const th = await admin.from('dg_threads').select('desk_id').eq('id', thread).maybeSingle();
+    const dk = th.data ? await admin.from('dg_desks').select('owner_user_id').eq('id', th.data.desk_id).maybeSingle() : null;
+    const owner = dk && dk.data ? dk.data.owner_user_id : null;
+    if (!owner) return base;
+    const pk = await admin.from('push_tokens').select('caps').eq('token', r.push_token).maybeSingle();
+    const caps = String((pk.data && pk.data.caps) || '');
+    const qr = await qrToken(String(owner), thread);
+    const qrUrl = SUPABASE_URL + '/functions/v1/dangol-quick-reply';
+    if (caps.indexOf('qr1') >= 0) {
+      return { data: { kind: 'message', link_id: thread, url: base.data.url, title: base.notification.title, body: base.notification.body, qr, qr_url: qrUrl },
+               android: { priority: 'HIGH' } };
+    }
+    const m = JSON.parse(JSON.stringify(base));
+    m.data.qr = qr; m.data.qr_url = qrUrl; m.apns.payload.aps.category = 'QR';
+    return m;
+  } catch (_e) { return base; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
@@ -191,12 +221,13 @@ Deno.serve(async (req) => {
     for (const r of rows) {
       const title = '🏪 ' + r.desk_name + ' 단골창구 — 새 문의';
       const text = (r.guest || '손님') + ': ' + String(r.preview || '').replace(/\s+/g, ' ');
-      const o = await sendOne(sa.project_id, accessToken, r.push_token, {
+      const base = {
         notification: { title, body: text },
         data: { kind: 'dangol', thread, url: 'dangol_owner.html?t=' + thread, title, body: text },
         android: { priority: 'HIGH', notification: { channel_id: 'aliascall_urgent', sound: 'default', tag: 'dangol-' + thread } },
         apns: { headers: { 'apns-priority': '10', 'apns-push-type': 'alert' }, payload: { aps: { sound: 'default', 'thread-id': 'dangol' } } },
-      });
+      };
+      const o = await sendOne(sa.project_id, accessToken, r.push_token, await ownerPayload(admin, thread, r, base));   // 🔴 2026-11-22 답장 열쇠
       if (o.ok) sent++;
     }
     return json({ ok: true, sent });
