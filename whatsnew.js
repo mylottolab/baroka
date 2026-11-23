@@ -37,6 +37,14 @@
                        en: ['⭐ Speed dial on the WAFA keypad: hold 1–9 to call · number slots show 🔢', DIAL_EN, LANG_EN] }
   ];
   NEWS.burum = [
+    { d: '2026.11.24', ko: ['⇆ 새 첫 화면 — 왼쪽 초록 [부름](모든 사람과 소통) · 오른쪽 주황 [누름](한 사람과 1:1 핫라인), 누르면 각 다이얼로',
+                            '📱 「앱을 열면 처음에」 갈림길 · 부름 · 누름 중에서 골라 두기 (갈림길 화면 아래, 언제든 바꾸기)',
+                            '🟢 누름 화면 아래 초록 [부름 사용하러 가기] · 🟠 부름 위쪽 로그아웃 옆 주황 [누름 사용하러 가기]',
+                            '☎ 위쪽 [초기화면(다이얼)] 단추로 언제든 첫 화면으로'],
+                       en: ['⇆ New first screen: green [Burum] (talk with anyone) on the left, orange [Nureum] (1:1 hotline) on the right',
+                            '📱 Choose what opens first: the split screen, Burum or Nureum (bottom of the split screen)',
+                            '🟢 Green [Use Burum] on Nureum screens · 🟠 orange [Use Nureum] next to Log out',
+                            '☎ [Home (dial)] at the top takes you back any time'] },
     { d: '2026.11.23', ko: ['📱 전화 번호판을 한 화면에 — 위쪽 이용권 띠는 얇게, ⌫ 지움은 번호 옆으로(꾸욱 = 모두 지움)',
                             '📵 없는 번호를 누르면 「현재 개통되지 않았거나 받을 수 없는 번호」 안내를 번호 바로 위에 노란 글씨로',
                             '🔐 가입 없이 누름만 쓰던 분이 부름 화면을 열면 아이디 만들기 · 로그인을 먼저 안내'],
@@ -47,6 +55,8 @@
                        en: ['🔢 Speed dial holds aliases and plain numbers · number slots show 🔢', DIAL_EN, LANG_EN, REPLY_EN] }
   ];
   NEWS.nureum = [
+    { d: '2026.11.24', ko: ['⇆ 부름 앱 첫 화면에서 오른쪽 주황 [누름]을 누르면 바로 누름 다이얼', '🟢 아래쪽 단추 이름이 [부름 사용하러 가기](초록)로'],
+                       en: ['⇆ In the Burum app, tap orange [Nureum] on the first screen to open the Nureum dial', '🟢 The bottom button is now green [Use Burum]'] },
     { d: '2026.11.23', ko: NU_23_KO, en: NU_23_EN },
     { d: '2026.11.22', ko: ['🌐 누름 영어 화면 새로 · 위쪽 EN/KO 단추', '☎ 누름 다이얼 첫 화면 · 목록 화면 위 [☎ 다이얼]로 돌아가기'],
                        en: ['🌐 Nureum now in English · EN/KO button at the top', '☎ Nureum dial home · [☎ Dial] at the top of the list to go back'] }
