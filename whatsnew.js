@@ -1,7 +1,7 @@
 /* =====================================================================
    🆕 최근 업데이트 (2026-11-23) — 모든 앱 첫 화면 공용 · 원본은 wafa/whatsnew.js (다른 앱에는 같은 파일을 복사)
    쓰는 법(첫 화면): <script src="whatsnew.js?v=…" data-app="baronu" data-after=".nu-top" defer></script>
-     · data-app: wafa · burum · nureum · baronu · aliascall · baroka · dangol · dantok
+     · data-app: wafa · burum · nureum · baronu · aliascall · baroka · dangol · dantok · mylottolab · paperlotto
      · data-after: 이 요소 바로 아래에 띠를 넣습니다(없으면 data-before → 화면 맨 위)
    새 소식을 더할 때: 아래 NEWS 의 그 앱 목록 맨 앞에 { d:'날짜', ko:[…], en:[…] } 하나를 넣으면 됩니다.
    아직 안 본 새 소식이 있으면 띠에 반짝이는 NEW 가 붙고, 한 번 열어 보면 꺼집니다(이 휴대폰에 기억).
@@ -90,10 +90,29 @@
     { d: '2026.11.22', ko: ['🚪 새 첫 화면 — 내 방 문(새 글이면 불이 켜져요) · 처음 설정 2단계', '🌐 영어 전환 · 첫 화면 한/EN 단추', REPLY_KO],
                        en: ['🚪 New first screen: your room doors light up for new posts · 2-step setup', '🌐 English screens · KO/EN button on the first screen', REPLY_EN] }
   ];
+  var FEAT_KO = '📘 전체 기능 소개 화면 · PDF 내려받기 (화면 아래 「기능 소개」)', FEAT_EN = '📘 Full feature guide with PDF download (“Features” at the bottom)';
+  var HELP_KO = '▶ 사용법 영상(유튜브) · SNS 링크를 카카오톡 문의 옆에', HELP_EN = '▶ How-to video (YouTube) and SNS links next to the KakaoTalk contact';
+  var KAKAO_KO = '💬 카카오톡 채널로 문의하기 연결', KAKAO_EN = '💬 Ask us through our KakaoTalk channel';
+  NEWS.mylottolab = [
+    { d: '2026.11.21', ko: [FEAT_KO], en: [FEAT_EN] },
+    { d: '2026.11.09', ko: [HELP_KO, KAKAO_KO + ' (11월 8일)'], en: [HELP_EN, KAKAO_EN + ' (Nov 8)'] },
+    { d: '2026.11.06', ko: ['🔞 이용 나이를 만 18세 이상으로 (가입 동의 · 약관 제7조)'], en: ['🔞 Minimum age is now 18 (sign-up consent · Terms §7)'] }
+  ];
+  NEWS.paperlotto = [
+    { d: '2026.11.21', ko: ['📘 전체 기능 소개 화면 · PDF 내려받기 (위 메뉴 「기능 소개」)'], en: ['📘 Full feature guide with PDF download (“Features” in the top menu)'] },
+    { d: '2026.11.09', ko: [HELP_KO, KAKAO_KO + ' (11월 8일)'], en: [HELP_EN, KAKAO_EN + ' (Nov 8)'] },
+    { d: '2026.10.27', ko: ['📱 휴대폰 첫 화면 정리 — 로그인을 언어 · 주간/야간 옆으로, 메뉴는 한 줄(옆으로 밀기)',
+                            '🔔 메뉴 순서: 당첨확인 예약등록 · 통계 · 경마장 · 무제한 대결 · 공지 · 사용법',
+                            '📲 첫 화면에 앱 받기 단추 (안드로이드는 Google Play)'],
+                       en: ['📱 Tidier phone first screen: login next to language and day/night, one-line swipeable menu',
+                            '🔔 Menu order: result-check alerts · stats · race · unlimited battle · notices · how-to',
+                            '📲 Get-the-app buttons on the first screen (Google Play on Android)'] }
+  ];
   var NAMES = { wafa: ['와파', 'WAFA'], burum: ['부름', 'Burum'], nureum: ['누름', 'Nureum'], baronu: ['바로너', 'Baronu'],
-    aliascall: ['가림콜', 'AliasCall'], baroka: ['바로카', 'Baroka'], dangol: ['단골창구', 'Dangol'], dantok: ['단톡방', 'DanTok'] };
+    aliascall: ['가림콜', 'AliasCall'], baroka: ['바로카', 'Baroka'], dangol: ['단골창구', 'Dangol'], dantok: ['단톡방', 'DanTok'],
+    mylottolab: ['알림로또', 'My Lotto Lab'], paperlotto: ['페이퍼로또', 'PaperLotto'] };
   var LANGKEY = { wafa: 'wafa_lang', burum: 'alias_lang_v1', nureum: 'alias_lang_v1', baronu: 'alias_lang_v1',
-    aliascall: 'aliascall_lang', baroka: 'baroka_lang', dangol: 'dangol_lang', dantok: 'dantok_lang' };
+    aliascall: 'aliascall_lang', baroka: 'baroka_lang', dangol: 'dangol_lang', dantok: 'dantok_lang', mylottolab: 'mll_lang', paperlotto: 'paperlotto_lang' };
 
   var me = document.currentScript;
   var APP = (me && me.getAttribute('data-app')) || 'wafa';
@@ -102,6 +121,7 @@
     var v = null; try { v = localStorage.getItem(LANGKEY[APP]); } catch (e) {}
     if (v === 'en') return true;
     if (v === 'ko' || v === 'kr') return false;
+    if (v) return true;   // ja 등 다른 언어 → 영어로
     return !/^ko/i.test(navigator.language || 'ko');
   }
   var EN = isEn(), T = function(k, e){ return EN ? e : k; };
@@ -112,7 +132,8 @@
   function md(d){ var p = d.split('.'); return EN ? (+p[1]) + '/' + (+p[2]) : (+p[1]) + '월 ' + (+p[2]) + '일'; }
   function short(s){ return String(s).replace(/^[^\wㄱ-힣]+\s*/, '').split(/ — | - |: /)[0]; }
 
-  var css = '.wn-bar{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;margin:8px 0;padding:11px 14px;border:none;border-radius:16px;' +
+  var FONT = "font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic','Segoe UI',Roboto,sans-serif;";
+  var css = '.wn-bar{' + FONT + 'display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;margin:8px 0;padding:11px 14px;border:none;border-radius:16px;' +
     'background:linear-gradient(100deg,#FF2E63 0%,#FF6A3D 55%,#FF9F1C 100%);color:#fff;font:inherit;text-align:left;cursor:pointer;' +
     'box-shadow:0 6px 18px rgba(255,46,99,.35);-webkit-tap-highlight-color:transparent;position:relative;z-index:2}' +
     '.wn-bar:active{transform:scale(.985)}' +
@@ -126,7 +147,8 @@
     '.wn-ov{position:fixed;inset:0;z-index:2147483000;background:rgba(10,12,20,.55);display:flex;align-items:flex-end;justify-content:center}' +
     '.wn-sh{width:100%;max-width:560px;max-height:86vh;overflow:auto;background:#fff;color:#1B1D28;border-radius:24px 24px 0 0;' +
     'padding:18px max(18px,env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left));box-sizing:border-box;' +
-    'font-family:inherit;animation:wnU .22s ease-out}' +
+    FONT + 'animation:wnU .22s ease-out}' +
+    '.wn-sh *{' + FONT + '}' +
     '@keyframes wnU{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}' +
     '.wn-hd{display:flex;align-items:center;gap:10px;margin-bottom:6px}.wn-hd h2{flex:1;margin:0;font-size:20px;font-weight:900}' +
     '.wn-x{width:42px;height:42px;border:none;border-radius:50%;background:#F1F2F6;color:#1B1D28;font-size:18px;cursor:pointer}' +
@@ -176,6 +198,8 @@
     if (a) a.parentNode.insertBefore(bar, a.nextSibling);
     else if (b) b.parentNode.insertBefore(bar, b);
     else document.body.insertBefore(bar, document.body.firstChild);
+    /* 다른 안내(예: 아이폰 안내)가 같은 자리에 끼어들면 띠를 다시 제목 줄 바로 아래로 */
+    if (a) [400, 1500, 3500].forEach(function(ms){ setTimeout(function(){ if (a.parentNode && a.nextSibling !== bar) a.parentNode.insertBefore(bar, a.nextSibling); }, ms); });
   }
   window.WN = { open: open, news: NEWS, app: APP };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ mount(0); }); else mount(0);
