@@ -15,7 +15,7 @@
   BK.SITE = 'https://baroka.kr';   // 🔴 도메인 연결 전에는 QR이 아직 열리지 않습니다
   BK.CONTACT = 'weapps.kr@gmail.com';   // 광고 · 고객 문의 (에일리어스콜과 같은 창구)
   BK.sb = window.supabase.createClient(URL_, ANON);
-  try { setTimeout(function(){ BK.sb.rpc('weave_log_access', { p_app: 'baroka' }).then(function(){}, function(){}); }, 2500); } catch (e) {}   /* 🛡 접속 기록(3개월 보관) — weave_safety.sql */
+  try { setTimeout(function(){ BK.sb.rpc('weave_log_access', { p_app: 'baroka', p_dev: (function(){ try { var k = 'weave_dev', v = localStorage.getItem(k); if (!v) { v = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('d' + Date.now().toString(36) + Math.random().toString(36).slice(2)); localStorage.setItem(k, v); } return v; } catch (e) { return null; } })() }).then(function(){}, function(){}); }, 2500); } catch (e) {}   /* 🛡 접속 기록(3개월 보관) — weave_safety.sql */
   window.sb = window.sb || BK.sb;           // 에일리어스콜 도우미(스캔 · 결제)가 찾는 이름
   // 언어는 baroka_i18n.js 가 정합니다(aliascall_lang 도 함께)
 
