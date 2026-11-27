@@ -424,6 +424,7 @@ main{ max-width:480px; margin:0 auto; padding:26px 20px 60px; }
 const SUPABASE_URL = "https://qmwaraittiurkynszjts.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtd2FyYWl0dGl1cmt5bnN6anRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3ODQ5OTUsImV4cCI6MjEwMjM2MDk5NX0.9Qr2vFzDCSKS54N6C5QN44BvCzIPTMQyVz7nX3GqT9Y";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+try { setTimeout(function(){ sb.rpc('weave_log_access', { p_app: 'baroka' }).then(function(){}, function(){}); }, 2500); } catch (e) {}   /* 🛡 접속 기록(3개월 보관) — weave_safety.sql */
 
 // =====================================================================
 // 2026-08-25 신설: 다국어(한국어/영어) — 다른 화면들과 동일한 I18N 방식
