@@ -1,5 +1,5 @@
 /* =====================================================================
-   🆕 최근 업데이트 (2026-11-23) — 모든 앱 첫 화면 공용 · 원본은 wafa/whatsnew.js (다른 앱에는 같은 파일을 복사)
+   🆕 최근 업데이트 (2026-11-27) — 모든 앱 첫 화면 공용 · 원본은 wafa/whatsnew.js (다른 앱에는 같은 파일을 복사)
    쓰는 법(첫 화면): <script src="whatsnew.js?v=…" data-app="baronu" data-after=".nu-top" defer></script>
      · data-app: wafa · burum · nureum · baronu · aliascall · baroka · dangol · dantok · mylottolab · paperlotto
      · data-after: 이 요소 바로 아래에 띠를 넣습니다(없으면 data-before → 화면 맨 위)
@@ -29,6 +29,7 @@
     '👉 Tip added: long-press a home-screen icon to move it where you want'
   ];
   NEWS.wafa = [
+    { d: '2026.11.27', ko: ['📜 12월 4일부터 이용약관이 바뀝니다 — 범죄 · 불법 이용 금지와 수사 협조, 부정 이용 방지 조항이 더해집니다(약관 · 개인정보처리방침에서 볼 수 있어요)'], en: ['📜 Our Terms change on December 4: new clauses banning criminal or illegal use, on cooperation with lawful investigations, and on preventing abuse (see Terms and Privacy Policy)'] },
     { d: '2026.11.23', ko: ['📵 없는 번호를 누르면 「현재 개통되지 않은 번호」 안내가 누른 번호 바로 위에 노란 글씨로',
                             '📱 별칭 번호판을 한 화면에 — 위쪽 이용권 띠는 얇게, ⌫ 지움은 번호 옆으로(꾸욱 = 모두 지움)'],
                        en: ['📵 Unknown numbers: a yellow “number not in service” note right above the number you dialed',
@@ -37,6 +38,7 @@
                        en: ['⭐ Speed dial on the WAFA keypad: hold 1–9 to call · number slots show 🔢', DIAL_EN, LANG_EN] }
   ];
   NEWS.burum = [
+    { d: '2026.11.27', ko: ['📜 12월 4일부터 이용약관이 바뀝니다 — 범죄 · 불법 이용 금지와 수사 협조, 부정 이용 방지 조항이 더해집니다(약관 · 개인정보처리방침에서 볼 수 있어요)'], en: ['📜 Our Terms change on December 4: new clauses banning criminal or illegal use, on cooperation with lawful investigations, and on preventing abuse (see Terms and Privacy Policy)'] },
     { d: '2026.11.24', ko: ['⇆ 새 첫 화면 — 왼쪽 초록 [부름](모든 사람과 소통) · 오른쪽 주황 [누름](한 사람과 1:1 핫라인), 누르면 각 다이얼로',
                             '📱 「앱을 열면 처음에」 갈림길 · 부름 · 누름 중에서 골라 두기 (갈림길 화면 아래, 언제든 바꾸기)',
                             '🟢 누름 화면 아래 초록 [부름 사용하러 가기] · 🟠 부름 위쪽 로그아웃 옆 주황 [누름 사용하러 가기]',
@@ -55,6 +57,7 @@
                        en: ['🔢 Speed dial holds aliases and plain numbers · number slots show 🔢', DIAL_EN, LANG_EN, REPLY_EN] }
   ];
   NEWS.nureum = [
+    { d: '2026.11.27', ko: ['📜 12월 4일부터 이용약관이 바뀝니다 — 범죄 · 불법 이용 금지와 수사 협조, 부정 이용 방지 조항이 더해집니다(약관 · 개인정보처리방침에서 볼 수 있어요)'], en: ['📜 Our Terms change on December 4: new clauses banning criminal or illegal use, on cooperation with lawful investigations, and on preventing abuse (see Terms and Privacy Policy)'] },
     { d: '2026.11.24', ko: ['⇆ 부름 앱 첫 화면에서 오른쪽 주황 [누름]을 누르면 바로 누름 다이얼', '🟢 아래쪽 단추 이름이 [부름 사용하러 가기](초록)로'],
                        en: ['⇆ In the Burum app, tap orange [Nureum] on the first screen to open the Nureum dial', '🟢 The bottom button is now green [Use Burum]'] },
     { d: '2026.11.23', ko: NU_23_KO, en: NU_23_EN },
@@ -62,11 +65,13 @@
                        en: ['🌐 Nureum now in English · EN/KO button at the top', '☎ Nureum dial home · [☎ Dial] at the top of the list to go back'] }
   ];
   NEWS.baronu = [
+    { d: '2026.11.27', ko: ['📜 12월 4일부터 이용약관이 바뀝니다 — 범죄 · 불법 이용 금지와 수사 협조, 부정 이용 방지 조항이 더해집니다(약관 · 개인정보처리방침에서 볼 수 있어요)'], en: ['📜 Our Terms change on December 4: new clauses banning criminal or illegal use, on cooperation with lawful investigations, and on preventing abuse (see Terms and Privacy Policy)'] },
     { d: '2026.11.23', ko: NU_23_KO.concat(['🏠 안드로이드에서 바탕화면 아이콘 놓기가 안 되던 문제 고침']),
                        en: NU_23_EN.concat(['🏠 Fixed adding the home-screen icon on Android']) },
     { d: '2026.11.22', ko: [DIAL_KO, LANG_KO, REPLY_KO], en: [DIAL_EN, LANG_EN, REPLY_EN] }
   ];
   NEWS.aliascall = [
+    { d: '2026.11.27', ko: ['📜 12월 4일부터 이용약관이 바뀝니다 — 범죄 · 불법 이용 금지와 수사 협조, 부정 이용 방지 조항이 더해집니다(약관 · 개인정보처리방침에서 볼 수 있어요)'], en: ['📜 Our Terms change on December 4: new clauses banning criminal or illegal use, on cooperation with lawful investigations, and on preventing abuse (see Terms and Privacy Policy)'] },
     { d: '2026.11.23', ko: ['📞 다이얼 가운데 위쪽 반원 = 전화 걸기(큰 번호판) · 아래 반원 = 수신 대기',
                             '⚡ 단축회선/단축번호 — 일반 번호도 1~9 칸에 넣어 꾸욱 누르면 바로 전화(🔢 표시)',
                             '🔢 작은 번호판도 바로 누르기 · 두 번 톡(또는 ⤢)하면 큰 번호판',
@@ -79,12 +84,14 @@
                        en: [DIAL_EN, '↩ Link back to the dial from the classic screen', LANG_EN, REPLY_EN] }
   ];
   NEWS.baroka = [
+    { d: '2026.11.27', ko: ['📜 12월 4일부터 이용약관이 바뀝니다 — 범죄 · 불법 이용 금지와 수사 협조, 부정 이용 방지 조항이 더해집니다(약관 · 개인정보처리방침에서 볼 수 있어요)'], en: ['📜 Our Terms change on December 4: new clauses banning criminal or illegal use, on cooperation with lawful investigations, and on preventing abuse (see Terms and Privacy Policy)'] },
     { d: '2026.11.22', ko: ['🚗 새 첫 화면 — 「차 주인에게 연락」 · 「내 차」 두 갈래, 내 차 번호판 카드, 처음 설정 3단계(시험 연락)',
                             '↩ 예전 화면에서 [새 첫 화면으로 보기]', LANG_KO, REPLY_KO],
                        en: ['🚗 New first screen: “Contact an owner” or “My car”, your plate card, 3-step setup with a test contact',
                             '↩ [See the new first screen] from the old one', LANG_EN, REPLY_EN] }
   ];
   NEWS.dangol = [
+    { d: '2026.11.27', ko: ['📜 12월 4일부터 이용약관이 바뀝니다 — 범죄 · 불법 이용 금지와 수사 협조, 부정 이용 방지 조항이 더해집니다(약관 · 개인정보처리방침에서 볼 수 있어요)'], en: ['📜 Our Terms change on December 4: new clauses banning criminal or illegal use, on cooperation with lawful investigations, and on preventing abuse (see Terms and Privacy Policy)'] },
     { d: '2026.11.22', ko: ['🏪 새 첫 화면 — 「가게에 묻기」 · 「내 가게」 두 갈래, 가게 간판 카드, 처음 설정 3단계(시험 문의)',
                             '🌐 사장님 화면 영어 전환 · 첫 화면 한/EN 단추',
                             '↩ 손님 화면 [‹ 뒤로] · [🏠 처음으로], 문의 칸 안내 글을 알기 쉽게', REPLY_KO],
@@ -93,6 +100,7 @@
                             '↩ [‹ Back] · [🏠 Home] on customer screens, clearer question box hints', REPLY_EN] }
   ];
   NEWS.dantok = [
+    { d: '2026.11.27', ko: ['📜 12월 4일부터 이용약관이 바뀝니다 — 범죄 · 불법 이용 금지와 수사 협조, 부정 이용 방지 조항이 더해집니다(약관 · 개인정보처리방침에서 볼 수 있어요)'], en: ['📜 Our Terms change on December 4: new clauses banning criminal or illegal use, on cooperation with lawful investigations, and on preventing abuse (see Terms and Privacy Policy)'] },
     { d: '2026.11.23', ko: ['🙋 자기소개 · 인사 코너 — 방 안 ☰ → 「자기소개 · 인사 보기」. 사진이나 20초 영상 + 인사 글을 카톡처럼 줄지어 보고, 들어온 순 · 최근 · 이름 · 방장 먼저로 줄 세우기',
                             '🎞 목록에서는 영상이 움직이지 않고 첫 장면 + ▶ 만 — 눌렀을 때만 재생'],
                        en: ['🙋 Introductions corner: in a room tap ☰ → “See introductions”. A photo or 20-second video plus a greeting for each member, sorted by joined, recent, name or host first',
