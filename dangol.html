@@ -98,7 +98,7 @@ var DGHOST = /(^|\.)dangol\.org$/.test(location.hostname);   // 🏪 2026-11-15 
 function OWNER_CTA(){
   var otherApp = location.hostname !== 'aliascall.com' && !DGHOST && !!(window.AliasNative || (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || (window.webkit && window.webkit.messageHandlers));
   if (otherApp) return '<p>사장님은 <b>「단골창구」 앱</b>(플레이 스토어에서 「단골창구」 검색)이나 <b>가림콜</b> 앱의 「내 계정 → 🏪 단골창구」에서 우리 가게 단골창구를 여실 수 있어요.</p>';
-  return '<p><b>개설료 1년 9,900원</b> · 처음 30일 무료</p><a class="btn c" href="' + (DGHOST ? 'dangol_owner.html' : 'https://aliascall.com/dangol_owner.html') + '">우리 가게 단골창구 열기</a>';
+  return '<p><b>개설료 1년 9,900원</b> · 처음 7일 무료</p><a class="btn c" href="' + (DGHOST ? 'dangol_owner.html' : 'https://aliascall.com/dangol_owner.html') + '">우리 가게 단골창구 열기</a>';
 }
 /* 🌐 2026-11-17 손님 화면 영어 — 휴대폰 언어가 한국어가 아니면 영어로 (위쪽 「EN/한」 단추로 바꿀 수 있음).
    가게 이름 · 소개 · 자주 묻는 질문은 사장님이 쓴 그대로(한국어) 보입니다. */

@@ -148,7 +148,7 @@
     var r = await BK.sb.rpc('baroka_state');
     if (r.error || !r.data || !r.data.ok) { say('불러오지 못했어요. ' + ((r.error && r.error.message) || ''), 'bad'); return; }
     ST = r.data;
-    /* 🔴 2026-11-12 간편 등록(garimcall.com/car) 1개월 무료 쿠폰 차 */
+    /* 🔴 2026-11-12 간편 등록(garimcall.com/car) 7일 무료 쿠폰 차 */
     COUP = {}; try { var cl = await BK.sb.rpc('car_coupon_list'); ((cl && cl.data) || []).forEach(function(c){ if (!c.paid) COUP[c.id] = c; }); } catch (e) {}
     $('who').textContent = (ST.nickname || '') + ' 님으로 로그인됨';
     try { if (window.PartnerRef) PartnerRef.mount($('prBox')); } catch (e) {}
@@ -188,7 +188,7 @@
     $('others').innerHTML =
       coups.map(function(c){
         var ph = cPhase(c);
-        var st = ph === 'full' ? '🎁 1개월 무료 중 — <b>' + cDate(c.full_until) + '</b>까지 전화 + 문자, <b>' + cDate(c.msg_until) + '</b>까지 문자만'
+        var st = ph === 'full' ? '🎁 무료 기간 — <b>' + cDate(c.full_until) + '</b>까지 전화 + 문자, <b>' + cDate(c.msg_until) + '</b>까지 문자만'
                : ph === 'msg' ? '<b style="color:#B7791F">⚠ 무료 전화가 끝났어요 — ' + cDate(c.msg_until) + '까지 문자만 와요.</b> 그 뒤엔 연결이 멈춰요.'
                : '<b style="color:#C0392B">⛔ 무료 기간이 끝나 연결이 멈췄어요.</b> 등록하면 바로 다시 열려요.';
         return '<section class="bk-card"><h2>' + BK.esc(BK.plateNice(c.plate)) + '</h2><p class="bk-sub">' + st + '</p>' +
@@ -207,7 +207,7 @@
       var key = 'bk_coupon_nag_' + new Date().toDateString();
       if (nag && !localStorage.getItem(key)) {
         localStorage.setItem(key, '1');
-        say('🚗 ' + BK.plateNice(nag.plate) + ' — ' + (cPhase(nag) === 'off' ? '무료 기간이 끝나 연결이 멈췄어요.' : cPhase(nag) === 'msg' ? '무료 전화가 끝나 ' + cDate(nag.msg_until) + '까지 문자만 와요.' : '1개월 무료 전화가 ' + cDate(nag.full_until) + '에 끝나요.') +
+        say('🚗 ' + BK.plateNice(nag.plate) + ' — ' + (cPhase(nag) === 'off' ? '무료 기간이 끝나 연결이 멈췄어요.' : cPhase(nag) === 'msg' ? '무료 전화가 끝나 ' + cDate(nag.msg_until) + '까지 문자만 와요.' : '7일 무료 전화가 ' + cDate(nag.full_until) + '에 끝나요.') +
           ' 아래 「' + won(ST.price_reg) + '으로 계속 쓰기」를 누르면 차를 바꿀 때까지 계속 연결됩니다.', 'bad');
       }
     } catch (e) {}
